@@ -1,13 +1,36 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { restaurants, menuItems } from "../data/mockData";
 import MenuItemCard from "../components/MenuItemCard";
+import { getRestaurants, getMenuByRestaurantId } from "../api/client";
 
 function MenuPage() {
   const { id } = useParams();
   const restaurantId = Number(id);
 
-  const restaurant = restaurants.find((r) => r.id === restaurantId);
-  const items = menuItems.filter((item) => item.restaurantId === restaurantId);
+  const [restaurant, setRestaurant] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadMenuPage() {
+      try {
+        const restaurantList = await getRestaurants();
+
+        const selectedRestaurant = restaurantList.find(
+          (item) => Number(item.id) === restaurantId
+        );
+
+        const menu = await getMenuByRestaurantId(restaurantId);
+
+        setRestaurant(selectedRestaurant);
+        setItems(menu);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMenuPage();
+  }, [restaurantId]);
 
   function addToCart(item) {
     const currentCart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -30,11 +53,21 @@ function MenuPage() {
     alert(`${item.name} added to cart`);
   }
 
+  if (loading) {
+    return (
+      <section>
+        <h1>Loading menu...</h1>
+      </section>
+    );
+  }
+
   if (!restaurant) {
     return (
       <section>
         <h1>Restaurant not found</h1>
-        <Link to="/">Back to restaurants</Link>
+        <Link to="/" className="primary-link">
+          Back to restaurants
+        </Link>
       </section>
     );
   }
@@ -44,15 +77,20 @@ function MenuPage() {
       <div className="page-header">
         <h1>{restaurant.name}</h1>
         <p>
-          {restaurant.cuisine} • {restaurant.deliveryTime}
+          {restaurant.cuisine || restaurant.description || "Restaurant"} •{" "}
+          {restaurant.deliveryTime || "25-35 min"}
         </p>
       </div>
 
-      <div className="menu-list">
-        {items.map((item) => (
-          <MenuItemCard key={item.id} item={item} onAddToCart={addToCart} />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <p>No menu items available.</p>
+      ) : (
+        <div className="menu-list">
+          {items.map((item) => (
+            <MenuItemCard key={item.id} item={item} onAddToCart={addToCart} />
+          ))}
+        </div>
+      )}
 
       <div className="bottom-actions">
         <Link to="/cart" className="primary-link">

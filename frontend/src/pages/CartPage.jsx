@@ -56,7 +56,7 @@ function CartPage() {
         createdOrder.totalPrice ||
         createdOrder.total_price ||
         Number(totalPrice.toFixed(2)),
-      status: createdOrder.status || "created",
+      status: "created",
     };
 
     localStorage.setItem("lastOrder", JSON.stringify(normalizedOrder));
@@ -96,8 +96,10 @@ function CartPage() {
 
           <h2>Total: ${totalPrice.toFixed(2)}</h2>
 
-          <div className="bottom-actions">
-            <button onClick={clearCart}>Clear cart</button>
+          <div className="bottom-actions cart-actions">
+            <button onClick={clearCart} className="secondary-button">
+              Clear cart
+            </button>
             <button onClick={handleCreateOrder} className="primary-button">
               Create order
             </button>

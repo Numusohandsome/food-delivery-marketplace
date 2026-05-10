@@ -34,9 +34,10 @@ export async function getMenuByRestaurantId(restaurantId) {
   } catch (error) {
     console.warn("Using mock menu because backend is not available.");
 
-    return menuItems.filter(
-      (item) => item.restaurantId === Number(restaurantId)
-    );
+    return menuItems.filter((item) => {
+      const itemRestaurantId = item.restaurantId || item.restaurant_id;
+      return Number(itemRestaurantId) === Number(restaurantId);
+    });
   }
 }
 

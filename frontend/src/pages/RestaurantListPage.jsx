@@ -1,7 +1,19 @@
-import { restaurants } from "../data/mockData";
+import { useEffect, useState } from "react";
 import RestaurantCard from "../components/RestaurantCard";
+import { getRestaurants } from "../api/client";
 
 function RestaurantListPage() {
+  const [restaurants, setRestaurants] = useState([]);
+
+  useEffect(() => {
+    async function loadRestaurants() {
+      const data = await getRestaurants();
+      setRestaurants(data);
+    }
+
+    loadRestaurants();
+  }, []);
+
   return (
     <section>
       <div className="page-header">

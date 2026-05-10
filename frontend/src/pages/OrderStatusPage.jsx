@@ -6,8 +6,8 @@ import { connectOrderStatusSocket } from "../websocket/orderSocket";
 const statuses = ["created", "confirmed", "preparing", "picked_up", "delivered"];
 
 function OrderStatusPage() {
-  const params = useParams();
-  const orderId = params.orderId || params.id;
+  const { id } = useParams();
+  const orderId = id;
 
   const [order, setOrder] = useState(null);
   const [currentStatus, setCurrentStatus] = useState("created");
@@ -144,7 +144,9 @@ function OrderStatusPage() {
                 <span>{item.name || `Menu item #${item.menu_item_id}`}</span>
                 <span>
                   × {item.quantity}{" "}
-                  {item.price ? `$${(item.price * item.quantity).toFixed(2)}` : ""}
+                  {item.price
+                    ? `$${(item.price * item.quantity).toFixed(2)}`
+                    : ""}
                 </span>
               </div>
             ))}
