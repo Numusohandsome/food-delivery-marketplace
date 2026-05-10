@@ -79,3 +79,21 @@ users = {
         "is_active": True,
     },
 }
+
+
+couriers = {
+    1: {
+        "id": 1,
+        "full_name": "Demo Courier One",
+        "phone_number": "+998901112233",
+        "is_available": True,
+        "current_order_id": None,
+    },
+    2: {
+        "id": 2,
+        "full_name": "Demo Courier Two",
+        "phone_number": "+998902223344",
+        "is_available": False,
+        "current_order_id": 1,
+    },
+}
