@@ -1,34 +1,25 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import RestaurantListPage from "./pages/RestaurantListPage";
+import MenuPage from "./pages/MenuPage";
+import CartPage from "./pages/CartPage";
+import OrderStatusPage from "./pages/OrderStatusPage";
 
-export default function App() {
-  const [restaurants, setRestaurants] = useState([]);
-
-  useEffect(() => {
-    axios
-      .get("/api/restaurants")
-      .then((response) => setRestaurants(response.data))
-      .catch((error) => console.error("API error:", error));
-  }, []);
-
+function App() {
   return (
-    <main style={{ fontFamily: "Arial", padding: "40px" }}>
-      <h1>Food Delivery Marketplace</h1>
-      <p>Frontend is running through Docker and Nginx.</p>
+    <>
+      <Navbar />
 
-      <h2>Restaurants</h2>
-
-      {restaurants.length === 0 ? (
-        <p>Loading restaurants from backend...</p>
-      ) : (
-        <ul>
-          {restaurants.map((restaurant) => (
-            <li key={restaurant.id}>
-              {restaurant.name} — {restaurant.cuisine}
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+      <main className="container">
+        <Routes>
+          <Route path="/" element={<RestaurantListPage />} />
+          <Route path="/restaurants/:id/menu" element={<MenuPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/orders/:id" element={<OrderStatusPage />} />
+        </Routes>
+      </main>
+    </>
   );
 }
+
+export default App;
