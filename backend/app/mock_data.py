@@ -51,3 +51,31 @@ order_status_flow = [
     "picked_up",
     "delivered",
 ]
+
+
+users = {
+    1: {
+        "id": 1,
+        "full_name": "Demo Customer",
+        "email": "customer@example.com",
+        "password": "password123",
+        "role": "customer",
+        "is_active": True,
+    },
+    2: {
+        "id": 2,
+        "full_name": "Demo Restaurant Owner",
+        "email": "owner@example.com",
+        "password": "password123",
+        "role": "restaurant_owner",
+        "is_active": True,
+    },
+    3: {
+        "id": 3,
+        "full_name": "Demo Courier",
+        "email": "courier@example.com",
+        "password": "password123",
+        "role": "courier",
+        "is_active": True,
+    },
+}
