@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { createOrder } from "../api/client";
 
 function CartPage() {
   const [cart, setCart] = useState([]);
@@ -26,32 +27,48 @@ function CartPage() {
     localStorage.removeItem("cart");
   }
 
-  function createOrder() {
+  async function handleCreateOrder() {
     if (cart.length === 0) {
       alert("Cart is empty");
       return;
     }
 
-    const demoOrder = {
-      id: 1,
-      items: cart,
-      totalPrice,
-      status: "created",
-      createdAt: new Date().toISOString(),
+    const orderPayload = {
+      restaurant_id: cart[0]?.restaurantId || cart[0]?.restaurant_id || 1,
+      customer_id: 1,
+      delivery_address: "Demo address, Tashkent",
+      total_price: Number(totalPrice.toFixed(2)),
+      items: cart.map((item) => ({
+        menu_item_id: item.id,
+        quantity: item.quantity,
+        name: item.name,
+        price: item.price,
+      })),
     };
 
-    localStorage.setItem("lastOrder", JSON.stringify(demoOrder));
+    const createdOrder = await createOrder(orderPayload);
+
+    const normalizedOrder = {
+      ...createdOrder,
+      id: createdOrder.id || createdOrder.order_id || Date.now(),
+      items: cart,
+      totalPrice:
+        createdOrder.totalPrice ||
+        createdOrder.total_price ||
+        Number(totalPrice.toFixed(2)),
+      status: createdOrder.status || "created",
+    };
+
+    localStorage.setItem("lastOrder", JSON.stringify(normalizedOrder));
     localStorage.removeItem("cart");
 
-    navigate("/orders/1");
+    navigate(`/orders/${normalizedOrder.id}`);
   }
 
   return (
     <section>
-      <div className="page-header">
-        <h1>Your Cart</h1>
-        <p>Review your items before creating an order.</p>
-      </div>
+      <h1>Your Cart</h1>
+      <p>Review your items before creating an order.</p>
 
       {cart.length === 0 ? (
         <div className="empty-state">
@@ -64,7 +81,7 @@ function CartPage() {
         <>
           <div className="cart-list">
             {cart.map((item) => (
-              <div key={item.id} className="cart-item">
+              <div className="cart-item" key={item.id}>
                 <div>
                   <h3>{item.name}</h3>
                   <p>
@@ -77,18 +94,13 @@ function CartPage() {
             ))}
           </div>
 
-          <div className="cart-summary">
-            <h2>Total: ${totalPrice.toFixed(2)}</h2>
+          <h2>Total: ${totalPrice.toFixed(2)}</h2>
 
-            <div className="cart-actions">
-              <button onClick={clearCart} className="secondary-button">
-                Clear cart
-              </button>
-
-              <button onClick={createOrder} className="primary-button">
-                Create order
-              </button>
-            </div>
+          <div className="bottom-actions">
+            <button onClick={clearCart}>Clear cart</button>
+            <button onClick={handleCreateOrder} className="primary-button">
+              Create order
+            </button>
           </div>
         </>
       )}

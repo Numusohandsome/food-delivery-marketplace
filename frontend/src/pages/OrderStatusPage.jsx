@@ -1,50 +1,78 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getOrderById, updateOrderStatus } from "../api/client";
+import { connectOrderStatusSocket } from "../websocket/orderSocket";
 
-const statuses = ["created", "accepted", "preparing", "on_the_way", "delivered"];
+const statuses = ["created", "confirmed", "preparing", "picked_up", "delivered"];
 
 function OrderStatusPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const orderId = params.orderId || params.id;
+
   const [order, setOrder] = useState(null);
-  const [statusIndex, setStatusIndex] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState("created");
+  const [socketConnected, setSocketConnected] = useState(false);
 
   useEffect(() => {
-    const savedOrder = JSON.parse(localStorage.getItem("lastOrder"));
+    async function loadOrder() {
+      const data = await getOrderById(orderId);
 
-    if (savedOrder) {
-      setOrder(savedOrder);
-      const index = statuses.indexOf(savedOrder.status);
-      setStatusIndex(index >= 0 ? index : 0);
+      setOrder(data);
+      setCurrentStatus(data.status || "created");
     }
-  }, []);
+
+    loadOrder();
+  }, [orderId]);
 
   useEffect(() => {
-    if (!order) return;
+    const socket = connectOrderStatusSocket(orderId, (newStatus) => {
+      setCurrentStatus(newStatus);
 
-    const interval = setInterval(() => {
-      setStatusIndex((currentIndex) => {
-        if (currentIndex >= statuses.length - 1) {
-          clearInterval(interval);
-          return currentIndex;
+      setOrder((previousOrder) => {
+        if (!previousOrder) {
+          return previousOrder;
         }
 
-        const nextIndex = currentIndex + 1;
-        const nextStatus = statuses[nextIndex];
-
         const updatedOrder = {
-          ...order,
-          status: nextStatus,
+          ...previousOrder,
+          status: newStatus,
         };
 
-        setOrder(updatedOrder);
         localStorage.setItem("lastOrder", JSON.stringify(updatedOrder));
-
-        return nextIndex;
+        return updatedOrder;
       });
-    }, 3000);
+    });
 
-    return () => clearInterval(interval);
-  }, [order]);
+    if (socket) {
+      socket.onopen = () => {
+        setSocketConnected(true);
+      };
+
+      socket.onclose = () => {
+        setSocketConnected(false);
+      };
+    }
+
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, [orderId]);
+
+  async function moveToNextStatus() {
+    const currentIndex = statuses.indexOf(currentStatus);
+    const nextStatus = statuses[currentIndex + 1];
+
+    if (!nextStatus) {
+      return;
+    }
+
+    const updatedOrder = await updateOrderStatus(orderId, nextStatus);
+
+    setOrder(updatedOrder);
+    setCurrentStatus(updatedOrder.status || nextStatus);
+  }
 
   if (!order) {
     return (
@@ -55,49 +83,76 @@ function OrderStatusPage() {
     );
   }
 
+  const orderItems = order.items || [];
+  const totalPrice = order.totalPrice || order.total_price || 0;
+
   return (
     <section>
       <div className="page-header">
-        <h1>Order #{id}</h1>
-        <p>Live order status simulation.</p>
+        <h1>Order Status</h1>
+        <p>Live order status tracking.</p>
       </div>
 
       <div className="status-card">
-        <h2>Current status:</h2>
-        <div className={`status-badge status-${statuses[statusIndex]}`}>
-          {statuses[statusIndex].replaceAll("_", " ")}
-        </div>
+        <p>
+          <strong>Order ID:</strong> {order.id || order.order_id || orderId}
+        </p>
+
+        <p>
+          <strong>Current status:</strong>{" "}
+          <span className="status-label">
+            {currentStatus.replaceAll("_", " ")}
+          </span>
+        </p>
+
+        <p>
+          <strong>WebSocket:</strong>{" "}
+          {socketConnected ? "connected" : "not connected / fallback mode"}
+        </p>
 
         <div className="status-steps">
-          {statuses.map((status, index) => (
+          {statuses.map((status) => (
             <div
               key={status}
               className={
-                index <= statusIndex ? "status-step active" : "status-step"
+                statuses.indexOf(status) <= statuses.indexOf(currentStatus)
+                  ? "status-step active"
+                  : "status-step"
               }
             >
               {status.replaceAll("_", " ")}
             </div>
           ))}
         </div>
-      </div>
 
-      <div className="order-summary">
+        <button
+          className="primary-button"
+          onClick={moveToNextStatus}
+          disabled={currentStatus === "delivered"}
+        >
+          Move to next status
+        </button>
+
         <h2>Order items</h2>
 
-        {order.items.map((item) => (
-          <div key={item.id} className="order-item">
-            <span>
-              {item.name} × {item.quantity}
-            </span>
-            <span>${(item.price * item.quantity).toFixed(2)}</span>
+        {orderItems.length === 0 ? (
+          <p>No order items available.</p>
+        ) : (
+          <div className="order-items">
+            {orderItems.map((item) => (
+              <div key={item.id || item.menu_item_id} className="order-item">
+                <span>{item.name || `Menu item #${item.menu_item_id}`}</span>
+                <span>
+                  × {item.quantity}{" "}
+                  {item.price ? `$${(item.price * item.quantity).toFixed(2)}` : ""}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
-        <h3>Total: ${order.totalPrice.toFixed(2)}</h3>
-      </div>
+        <h3>Total: ${Number(totalPrice).toFixed(2)}</h3>
 
-      <div className="bottom-actions">
         <Link to="/" className="primary-link">
           Create another order
         </Link>

@@ -2,6 +2,10 @@ const WS_URL =
   import.meta.env.VITE_WS_BASE_URL || "ws://127.0.0.1:8000/ws";
 
 export function connectOrderStatusSocket(orderId, onStatusUpdate) {
+  if (!orderId) {
+    return null;
+  }
+
   const socketUrl = `${WS_URL}/orders/${orderId}`;
 
   let socket;
