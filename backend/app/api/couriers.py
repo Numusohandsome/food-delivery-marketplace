@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from app.mock_data import couriers
+from app.db.session import get_db
+from app.models.courier import Courier
 from app.schemas.courier import CourierAvailabilityUpdate, CourierOut
 
 
@@ -11,13 +13,17 @@ router = APIRouter(
 
 
 @router.get("", response_model=list[CourierOut])
-def get_couriers():
-    return list(couriers.values())
+def get_couriers(db: Session = Depends(get_db)):
+    couriers = db.query(Courier).all()
+    return couriers
 
 
 @router.get("/{courier_id}", response_model=CourierOut)
-def get_courier_by_id(courier_id: int):
-    courier = couriers.get(courier_id)
+def get_courier_by_id(
+    courier_id: int,
+    db: Session = Depends(get_db),
+):
+    courier = db.query(Courier).filter(Courier.id == courier_id).first()
 
     if courier is None:
         raise HTTPException(
@@ -32,8 +38,9 @@ def get_courier_by_id(courier_id: int):
 def update_courier_availability(
     courier_id: int,
     availability_data: CourierAvailabilityUpdate,
+    db: Session = Depends(get_db),
 ):
-    courier = couriers.get(courier_id)
+    courier = db.query(Courier).filter(Courier.id == courier_id).first()
 
     if courier is None:
         raise HTTPException(
@@ -41,6 +48,9 @@ def update_courier_availability(
             detail="Courier not found",
         )
 
-    courier["is_available"] = availability_data.is_available
+    courier.is_available = availability_data.is_available
+
+    db.commit()
+    db.refresh(courier)
 
     return courier
