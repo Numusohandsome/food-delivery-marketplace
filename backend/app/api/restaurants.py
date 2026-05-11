@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from app.mock_data import restaurants, menu_items
-from app.schemas.restaurant import RestaurantOut, MenuItemOut
+from app.db.session import get_db
+from app.models.menu_item import MenuItem
+from app.models.restaurant import Restaurant
+from app.schemas.restaurant import MenuItemOut, RestaurantOut
 
 
 router = APIRouter(
@@ -11,24 +14,28 @@ router = APIRouter(
 
 
 @router.get("", response_model=list[RestaurantOut])
-def get_restaurants():
+def get_restaurants(db: Session = Depends(get_db)):
+    restaurants = db.query(Restaurant).all()
     return restaurants
 
 
 @router.get("/{restaurant_id}/menu", response_model=list[MenuItemOut])
-def get_restaurant_menu(restaurant_id: int):
-    restaurant_exists = any(
-        restaurant["id"] == restaurant_id for restaurant in restaurants
-    )
+def get_restaurant_menu(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+):
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
 
-    if not restaurant_exists:
+    if restaurant is None:
         raise HTTPException(
             status_code=404,
             detail="Restaurant not found",
         )
 
-    restaurant_menu = [
-        item for item in menu_items if item["restaurant_id"] == restaurant_id
-    ]
+    menu_items = (
+        db.query(MenuItem)
+        .filter(MenuItem.restaurant_id == restaurant_id)
+        .all()
+    )
 
-    return restaurant_menu
+    return menu_items
