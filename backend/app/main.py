@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.rate_limiter import rate_limiter
@@ -27,7 +28,13 @@ async def token_bucket_rate_limiter(request: Request, call_next):
     if request.url.path in ["/docs", "/openapi.json", "/redoc"]:
         return await call_next(request)
 
-    rate_limiter.check_request(request)
+    if not rate_limiter.is_allowed(request):
+        return JSONResponse(
+            status_code=429,
+            content={
+                "detail": "Too many requests. Please try again later.",
+            },
+        )
 
     response = await call_next(request)
     return response

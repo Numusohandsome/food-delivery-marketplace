@@ -1,43 +1,39 @@
+import asyncio
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-router = APIRouter()
+from app.mock_data import orders
 
-active_connections: dict[int, list[WebSocket]] = {}
+
+router = APIRouter(
+    tags=["websocket"],
+)
 
 
 @router.websocket("/ws/orders/{order_id}")
-async def websocket_order_status(websocket: WebSocket, order_id: int):
+async def order_status_websocket(websocket: WebSocket, order_id: int):
     await websocket.accept()
-
-    if order_id not in active_connections:
-        active_connections[order_id] = []
-
-    active_connections[order_id].append(websocket)
-
-    await websocket.send_json(
-        {
-            "order_id": order_id,
-            "status": "connected",
-        }
-    )
 
     try:
         while True:
-            await websocket.receive_text()
+            order = orders.get(order_id)
+
+            if order is None:
+                await websocket.send_json(
+                    {
+                        "error": "Order not found",
+                        "order_id": order_id,
+                    }
+                )
+            else:
+                await websocket.send_json(
+                    {
+                        "order_id": order_id,
+                        "status": order["status"],
+                    }
+                )
+
+            await asyncio.sleep(2)
+
     except WebSocketDisconnect:
-        active_connections[order_id].remove(websocket)
-
-        if not active_connections[order_id]:
-            del active_connections[order_id]
-
-
-async def broadcast_order_status(order_id: int, status: str):
-    message = {
-        "order_id": order_id,
-        "status": status,
-    }
-
-    connections = active_connections.get(order_id, [])
-
-    for websocket in connections:
-        await websocket.send_json(message)
+        print(f"WebSocket disconnected for order_id={order_id}")

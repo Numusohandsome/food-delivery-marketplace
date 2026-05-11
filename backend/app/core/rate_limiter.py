@@ -1,6 +1,6 @@
 import time
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 
 class TokenBucket:
@@ -37,7 +37,7 @@ class TokenBucketRateLimiter:
 
         return request.client.host
 
-    def check_request(self, request: Request):
+    def is_allowed(self, request: Request) -> bool:
         client_key = self.get_client_key(request)
 
         if client_key not in self.buckets:
@@ -47,12 +47,7 @@ class TokenBucketRateLimiter:
             )
 
         bucket = self.buckets[client_key]
-
-        if not bucket.allow_request():
-            raise HTTPException(
-                status_code=429,
-                detail="Too many requests. Please try again later.",
-            )
+        return bucket.allow_request()
 
 
 rate_limiter = TokenBucketRateLimiter(
