@@ -3,7 +3,7 @@ from app.models.user import User
 from app.models.restaurant import Restaurant
 from app.models.menu_item import MenuItem
 from app.models.courier import Courier
-
+from app.core.security import get_password_hash
 
 def seed_users(db):
     existing_user = db.query(User).filter(User.email == "customer@example.com").first()
@@ -15,21 +15,21 @@ def seed_users(db):
         User(
             full_name="Demo Customer",
             email="customer@example.com",
-            hashed_password="password123",
+	hashed_password=get_password_hash("password123"),
             role="customer",
             is_active=True,
         ),
         User(
             full_name="Demo Restaurant Owner",
             email="owner@example.com",
-            hashed_password="password123",
+            hashed_password=get_password_hash("password123"),
             role="restaurant_owner",
             is_active=True,
         ),
         User(
             full_name="Demo Courier",
             email="courier@example.com",
-            hashed_password="password123",
+            hashed_password=get_password_hash("password123"),
             role="courier",
             is_active=True,
         ),

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse
@@ -29,7 +30,7 @@ def register_user(
     new_user = User(
         full_name=user_data.full_name,
         email=user_data.email,
-        hashed_password=user_data.password,
+        hashed_password=get_password_hash(user_data.password),
         role=user_data.role,
         is_active=True,
     )
@@ -48,15 +49,21 @@ def login_user(
 ):
     user = db.query(User).filter(User.email == login_data.email).first()
 
-    if user is None or user.hashed_password != login_data.password:
+    if user is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
         )
 
-    fake_token = f"fake-token-for-user-{user.id}"
+    if not verify_password(login_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+        )
+
+    access_token = create_access_token(subject=str(user.id))
 
     return {
-        "access_token": fake_token,
+        "access_token": access_token,
         "token_type": "bearer",
     }
