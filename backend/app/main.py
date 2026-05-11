@@ -1,12 +1,9 @@
-<<<<<<< Updated upstream
-from fastapi import FastAPI
-=======
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
->>>>>>> Stashed changes
 
 from app.api.router import api_router
+from app.core.rate_limiter import rate_limiter
 from app.websocket.orders import router as websocket_router
 
 
@@ -17,8 +14,6 @@ app = FastAPI(
 )
 
 
-<<<<<<< Updated upstream
-=======
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,7 +40,6 @@ async def token_bucket_rate_limiter(request: Request, call_next):
     return response
 
 
->>>>>>> Stashed changes
 @app.get("/", tags=["health"])
 def root():
     return {
