@@ -34,30 +34,36 @@ services:
   backend1:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: food_backend1
-    env_file:
-      - .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://food_user:food_password@postgres:5432/food_delivery
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8001:8000"
 
   backend2:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: food_backend2
-    env_file:
-      - .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://food_user:food_password@postgres:5432/food_delivery
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8002:8000"
 
   frontend:
     build:
