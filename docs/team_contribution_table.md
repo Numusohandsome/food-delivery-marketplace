@@ -1,0 +1,8 @@
+# Team Contribution Table
+
+| Team Member | Role | Main Responsibilities | Completed Contributions |
+|---|---|---|---|
+| Maxsetov Salamat | Frontend + Report | React frontend, user flow, WebSocket demonstration, screenshots, report sections | Implemented restaurant list page, menu page, cart page, order creation flow, and order status page. Connected frontend to REST API and WebSocket endpoint. Captured frontend screenshots for the report. Prepared frontend implementation text and diagrams. |
+| Team Member 2 | Backend Core | FastAPI backend, REST API endpoints, WebSocket backend logic, from-scratch component | Implemented backend API endpoints for restaurants, menu, orders, and order status updates. Added WebSocket support for live order updates. Implemented Token Bucket Rate Limiter as the from-scratch component. |
+| Team Member 3 | Database + Cache | PostgreSQL schema, migrations, seed data, indexes, Redis cache design | Designed and implemented database schema, relationships, constraints, Alembic migrations, seed data, performance indexes, query optimization results, and Redis cache design. |
+| Team Member 4 | Docker Infrastructure + Observability | Docker Compose, Nginx gateway, backend replicas, Prometheus, Grafana, Loki, deployment documentation | Configured Docker Compose, Nginx API Gateway, backend replicas, PostgreSQL, Redis, frontend container, Prometheus, Grafana, Loki, and Promtail. Prepared infrastructure screenshots and Docker run instructions. |
