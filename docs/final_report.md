@@ -2232,6 +2232,32 @@ The following screenshots were collected and stored in the project repository.
 
 ---
 
+
+## Appendix A.1 Integration Screenshots
+
+The integration screenshots were added by the team to provide evidence for Docker Compose execution, gateway API checks, frontend access, Grafana, Prometheus, and backend API verification.
+
+| Screenshot | Location |
+|---|---|
+| Integration screenshot 01 | `docs/screenshots/integration/integration-01.png` |
+| Integration screenshot 02 | `docs/screenshots/integration/integration-02.png` |
+| Integration screenshot 03 | `docs/screenshots/integration/integration-03.png` |
+| Integration screenshot 04 | `docs/screenshots/integration/integration-04.png` |
+| Integration screenshot 05 | `docs/screenshots/integration/integration-05.png` |
+| Integration screenshot 06 | `docs/screenshots/integration/integration-06.png` |
+| Integration screenshot 07 | `docs/screenshots/integration/integration-07.png` |
+| Integration screenshot 08 | `docs/screenshots/integration/integration-08.png` |
+| Integration screenshot 09 | `docs/screenshots/integration/integration-09.png` |
+| Integration screenshot 10 | `docs/screenshots/integration/integration-10.png` |
+| Integration screenshot 11 | `docs/screenshots/integration/integration-11.png` |
+| Integration screenshot 12 | `docs/screenshots/integration/integration-12.png` |
+| Integration screenshot 13 | `docs/screenshots/integration/integration-13.png` |
+| Integration screenshot 14 | `docs/screenshots/integration/integration-14.png` |
+| Integration screenshot 15 | `docs/screenshots/integration/integration-15.png` |
+| Integration screenshot 16 | `docs/screenshots/integration/integration-16.png` |
+
+These screenshots support the final report evidence for container orchestration, gateway routing, API verification, frontend integration, and observability.
+
 # Appendix B. Diagrams
 
 The following diagrams were prepared for the project report.
