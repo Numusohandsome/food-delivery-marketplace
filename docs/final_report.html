@@ -1,0 +1,3600 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Food-Delivery Marketplace Final Report</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    line-height: 1.45;
+    color: #111;
+}
+h1, h2, h3 {
+    color: #1f4e79;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+}
+th {
+    background: #1f4e79;
+    color: white;
+}
+th, td {
+    border: 1px solid #444;
+    padding: 6px 8px;
+    vertical-align: top;
+}
+code, pre {
+    background: #f2f2f2;
+    padding: 2px 4px;
+}
+pre {
+    padding: 10px;
+    overflow-x: auto;
+}
+img {
+    max-width: 100%;
+}
+@media print {
+    body {
+        margin: 20mm;
+        max-width: none;
+    }
+    h1, h2 {
+        page-break-after: avoid;
+    }
+    table {
+        page-break-inside: avoid;
+    }
+}
+</style>
+</head>
+<body>
+<h1 id="food-delivery-marketplace">Food-Delivery Marketplace</h1>
+<h2 id="final-project-report">Final Project Report</h2>
+<p><strong>Course:</strong> Database Application and Design<br />
+<strong>Project:</strong> Food-Delivery Marketplace<br />
+<strong>Team Name:</strong> Food Delivery Marketplace Team<br />
+<strong>Motto:</strong> Delivering food, data, and reliability in one platform.<br />
+<strong>GitHub Repository:</strong> https://github.com/Numusohandsome/food-delivery-marketplace<br />
+<strong>Local Development URL:</strong> http://localhost<br />
+<strong>Deployed URL:</strong> http://138.68.88.189<br />
+<strong>Swagger/OpenAPI:</strong> http://138.68.88.189/docs<br />
+<strong>Public API Example:</strong> http://138.68.88.189/api/restaurants<br />
+<strong>Grafana:</strong> http://138.68.88.189:3000/login<br />
+<strong>Prometheus:</strong> http://138.68.88.189:9090<br />
+<strong>Loki Ready:</strong> http://138.68.88.189:3100/ready 
+<strong>Date:</strong> May 2026  </p>
+<hr />
+<h2 id="team-members">Team Members</h2>
+<table>
+<thead>
+<tr>
+<th>Student Name</th>
+<th>Student ID</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Miraxmedova Samira</td>
+<td>U2310169</td>
+<td>Frontend + Report</td>
+</tr>
+<tr>
+<td>Maxsetov Nurmukhamad</td>
+<td>U2310163</td>
+<td>Backend Core</td>
+</tr>
+<tr>
+<td>Maxsetov Salamat</td>
+<td>U2310164</td>
+<td>Database + Cache</td>
+</tr>
+<tr>
+<td>Mirjalilov Mirkamol</td>
+<td>U2310171</td>
+<td>Docker Infrastructure + Observability</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="1-abstract">1. Abstract</h1>
+<p>This project presents a food-delivery marketplace system developed as a full-stack database application. The platform connects customers, restaurants, couriers, and backend services through a single integrated system. Customers can browse restaurants, open restaurant menus, add food items to a cart, create orders, and track order status updates in real time.</p>
+<p>The system was implemented using React and Vite for the frontend, FastAPI for the backend, PostgreSQL as the main relational database, Redis as an additional data store and cache, WebSocket for live order updates, and Docker Compose for container orchestration. Nginx is used as an API Gateway that routes client traffic to the frontend and backend services. The backend is deployed with two replicas to demonstrate gateway routing and load balancing.</p>
+<p>The database layer stores the main business entities of the food-delivery domain, including users, restaurants, menu items, orders, order items, payments, couriers, deliveries, order status history, and reviews. The project also includes Alembic migrations, seed data, indexes, query optimization results, and Redis cache design.</p>
+<p>The system supports REST API communication for standard operations and WebSocket communication for real-time order status updates. A daily restaurant settlement batch pipeline was designed to calculate restaurant revenue and payouts. In addition, a Token Bucket Rate Limiter was implemented as the from-scratch system component and integrated into the backend.</p>
+<p>The full application is containerized and can be started using Docker Compose. The infrastructure includes frontend, backend replicas, PostgreSQL, Redis, Nginx, Prometheus, Grafana, Loki, and Promtail. The final system demonstrates a working customer flow, database-backed application design, real-time communication, containerized infrastructure, observability, and project documentation.</p>
+<hr />
+<h1 id="2-business-scenario-and-requirements">2. Business Scenario and Requirements</h1>
+<h2 id="21-business-scenario">2.1 Business Scenario</h2>
+<p>The selected business scenario is a food-delivery marketplace. The platform allows customers to order food from multiple restaurants through a single web application. Restaurants provide menu items, customers place orders, couriers deliver orders, and the system tracks the complete order lifecycle.</p>
+<p>The main goal of the system is to demonstrate a realistic database-driven distributed application. The project combines frontend interaction, backend APIs, relational database design, Redis caching, WebSocket live updates, batch processing, Docker infrastructure, and observability.</p>
+<p>The main customer journey is:</p>
+<pre><code class="language-text">Open marketplace
+→ Browse restaurants
+→ Select a restaurant
+→ View menu
+→ Add items to cart
+→ Create order
+→ Track order status
+→ Receive live WebSocket updates
+</code></pre>
+<p>The supported order status flow is:</p>
+<pre><code class="language-text">created → confirmed → preparing → picked_up → delivered
+</code></pre>
+<hr />
+<h2 id="22-actors">2.2 Actors</h2>
+<table>
+<thead>
+<tr>
+<th>Actor</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Customer</td>
+<td>A user who browses restaurants, selects menu items, creates orders, and tracks order status.</td>
+</tr>
+<tr>
+<td>Restaurant Owner</td>
+<td>A user responsible for restaurant information, menu items, and order preparation.</td>
+</tr>
+<tr>
+<td>Courier</td>
+<td>A delivery worker responsible for picking up and delivering customer orders.</td>
+</tr>
+<tr>
+<td>Platform Backend</td>
+<td>The backend service that manages API requests, order processing, WebSocket updates, rate limiting, and data access.</td>
+</tr>
+<tr>
+<td>Administrator / Operator</td>
+<td>A person who monitors the system through logs, metrics, dashboards, and documentation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="23-use-cases">2.3 Use Cases</h2>
+<h3 id="use-case-1-browse-restaurants">Use Case 1: Browse Restaurants</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Actor</td>
+<td>Customer</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>View the list of available restaurants.</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>The system is running and restaurant data exists.</td>
+</tr>
+<tr>
+<td>Primary Flow</td>
+<td>The customer opens the frontend application. The frontend sends a request to the restaurant API endpoint. The backend returns restaurant data. The frontend displays restaurant cards.</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>The customer can select a restaurant and open its menu.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="use-case-2-view-restaurant-menu">Use Case 2: View Restaurant Menu</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Actor</td>
+<td>Customer</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>View menu items of a selected restaurant.</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>The customer has selected a restaurant from the restaurant list.</td>
+</tr>
+<tr>
+<td>Primary Flow</td>
+<td>The customer clicks “View menu”. The frontend sends a request for the selected restaurant menu. The backend returns menu items. The frontend displays item names, descriptions, and prices.</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>The customer can add menu items to the cart.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="use-case-3-create-order">Use Case 3: Create Order</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Actor</td>
+<td>Customer</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>Create an order from selected menu items.</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>The customer has added at least one item to the cart.</td>
+</tr>
+<tr>
+<td>Primary Flow</td>
+<td>The customer opens the cart page and reviews selected items. The customer clicks “Create order”. The frontend sends an order creation request to the backend. The backend creates the order and returns the order ID and initial status.</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>The order is created with status <code>created</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="use-case-4-track-order-status">Use Case 4: Track Order Status</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Actor</td>
+<td>Customer</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>View the current status of an order.</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>An order has already been created.</td>
+</tr>
+<tr>
+<td>Primary Flow</td>
+<td>The customer opens the order status page. The frontend requests order details from the backend. The backend returns the current order status. The frontend displays the order status timeline.</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>The customer can see the current order status.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="use-case-5-receive-live-order-updates">Use Case 5: Receive Live Order Updates</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Actor</td>
+<td>Customer</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>Receive real-time order status updates without refreshing the page.</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>The order status page is open and the backend WebSocket service is running.</td>
+</tr>
+<tr>
+<td>Primary Flow</td>
+<td>The frontend opens a WebSocket connection for the order. The backend accepts the connection. When the order status changes, the backend sends an update message. The frontend updates the displayed status.</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>The customer sees live order status changes.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="24-functional-requirements">2.4 Functional Requirements</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>The system shall display a list of restaurants.</td>
+<td>React restaurant list page and REST API endpoint.</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>The system shall display menu items for a selected restaurant.</td>
+<td>Menu page and restaurant menu endpoint.</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>The system shall allow customers to add menu items to a cart.</td>
+<td>Frontend cart page and local cart state.</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>The system shall allow customers to create orders.</td>
+<td>Cart page and POST order endpoint.</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>The system shall display order status.</td>
+<td>Order status page and GET order endpoint.</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>The system shall support live order status updates.</td>
+<td>WebSocket endpoint and frontend WebSocket connection.</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>The system shall store structured business data.</td>
+<td>PostgreSQL relational schema.</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td>The system shall use an additional data store.</td>
+<td>Redis cache design.</td>
+</tr>
+<tr>
+<td>FR9</td>
+<td>The system shall support containerized execution.</td>
+<td>Docker Compose configuration.</td>
+</tr>
+<tr>
+<td>FR10</td>
+<td>The system shall include monitoring and logging.</td>
+<td>Prometheus, Grafana, Loki, and Promtail.</td>
+</tr>
+<tr>
+<td>FR11</td>
+<td>The system shall include a from-scratch component.</td>
+<td>Token Bucket Rate Limiter.</td>
+</tr>
+<tr>
+<td>FR12</td>
+<td>The system shall include documentation and diagrams.</td>
+<td>Markdown documentation, Mermaid diagrams, screenshots, and final report.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="25-non-functional-requirements">2.5 Non-Functional Requirements</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Usability</td>
+<td>The frontend should provide a simple and understandable customer flow.</td>
+</tr>
+<tr>
+<td>Maintainability</td>
+<td>The project should be separated into frontend, backend, database, infrastructure, and documentation parts.</td>
+</tr>
+<tr>
+<td>Scalability</td>
+<td>The backend should support multiple FastAPI replicas behind an Nginx gateway.</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>Docker Compose should start the full system consistently.</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>The system should provide metrics, logs, and dashboard screenshots.</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>PostgreSQL indexes and Redis caching should improve data access.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Environment variables should be used for secrets and configuration values.</td>
+</tr>
+<tr>
+<td>Portability</td>
+<td>The project should be runnable on another machine using Docker Compose.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="26-scale-assumptions">2.6 Scale Assumptions</h2>
+<p>The project is designed as a course-level prototype of a food-delivery marketplace. The expected scale is moderate and focused on demonstrating system architecture and database design rather than production-level traffic.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Assumption</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurants</td>
+<td>Tens to hundreds of restaurants.</td>
+</tr>
+<tr>
+<td>Menu Items</td>
+<td>Hundreds to thousands of menu items.</td>
+</tr>
+<tr>
+<td>Orders</td>
+<td>Hundreds to thousands of orders in test or demo data.</td>
+</tr>
+<tr>
+<td>Concurrent Users</td>
+<td>Several simultaneous users during demonstration.</td>
+</tr>
+<tr>
+<td>Backend Replicas</td>
+<td>Two FastAPI backend replicas behind Nginx.</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>One PostgreSQL instance for persistent relational data.</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>One Redis instance for caching and fast access.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="27-latency-targets">2.7 Latency Targets</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurant list loading</td>
+<td>Under 1 second in the local Docker environment.</td>
+</tr>
+<tr>
+<td>Menu page loading</td>
+<td>Under 1 second in the local Docker environment.</td>
+</tr>
+<tr>
+<td>Order creation</td>
+<td>Under 2 seconds in the local Docker environment.</td>
+</tr>
+<tr>
+<td>Order status request</td>
+<td>Under 1 second in the local Docker environment.</td>
+</tr>
+<tr>
+<td>WebSocket status update</td>
+<td>Near real time after backend status change.</td>
+</tr>
+</tbody>
+</table>
+<p>These latency targets are prototype-level targets and are intended to show that the system is responsive enough for a course project demonstration.</p>
+<hr />
+<h2 id="28-availability-expectations">2.8 Availability Expectations</h2>
+<p>The system is expected to run locally and in deployment through Docker Compose. The application should remain available while the required containers are running. The use of two backend replicas improves backend availability compared to a single backend container. If one backend replica becomes unavailable, the gateway can continue routing traffic to the other replica.</p>
+<p>The current prototype does not implement full production high availability because PostgreSQL and Redis are single-container services. However, the architecture demonstrates the foundation for future improvements such as managed databases, Redis replication, and production-grade load balancing.</p>
+<hr />
+<h2 id="29-security-constraints">2.9 Security Constraints</h2>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Environment variables</td>
+<td>Database credentials, Redis URL, JWT settings, and service ports are configured through environment variables.</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>Nginx is used as the main public entry point.</td>
+</tr>
+<tr>
+<td>Rate limiting</td>
+<td>A Token Bucket Rate Limiter is included to reduce excessive request traffic.</td>
+</tr>
+<tr>
+<td>Input validation</td>
+<td>Backend schemas validate API request and response data.</td>
+</tr>
+<tr>
+<td>Secrets handling</td>
+<td>Demo secrets are stored in environment configuration and should be replaced before production deployment.</td>
+</tr>
+<tr>
+<td>Future improvement</td>
+<td>HTTPS, stronger authentication, role-based access control, and secure secret management should be added before production deployment.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="3-domain-model-and-er-diagram">3. Domain Model and ER Diagram</h1>
+<h2 id="31-domain-model-overview">3.1 Domain Model Overview</h2>
+<p>The domain model of the food-delivery marketplace represents the main business objects involved in ordering and delivering food. The system includes customers, restaurants, menu items, orders, payments, couriers, deliveries, status history, and reviews.</p>
+<p>The database was designed around the main user journey: a customer selects a restaurant, chooses menu items, creates an order, pays for the order, and tracks delivery status. Restaurants manage menu items, couriers handle deliveries, and the system stores status changes for audit and tracking purposes.</p>
+<p>The main domain entities are:</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users</td>
+<td>Stores customer, restaurant owner, courier, and admin account data.</td>
+</tr>
+<tr>
+<td>user_addresses</td>
+<td>Stores delivery addresses connected to users.</td>
+</tr>
+<tr>
+<td>restaurant_categories</td>
+<td>Stores restaurant category data.</td>
+</tr>
+<tr>
+<td>restaurants</td>
+<td>Stores restaurant information and links restaurants to owners and categories.</td>
+</tr>
+<tr>
+<td>menu_items</td>
+<td>Stores menu items, descriptions, prices, and availability.</td>
+</tr>
+<tr>
+<td>orders</td>
+<td>Stores customer orders and order status.</td>
+</tr>
+<tr>
+<td>order_items</td>
+<td>Stores individual menu items inside an order.</td>
+</tr>
+<tr>
+<td>payments</td>
+<td>Stores payment method and payment status for an order.</td>
+</tr>
+<tr>
+<td>couriers</td>
+<td>Stores courier profile and availability status.</td>
+</tr>
+<tr>
+<td>deliveries</td>
+<td>Stores delivery assignment and delivery progress.</td>
+</tr>
+<tr>
+<td>order_status_history</td>
+<td>Stores historical order status changes.</td>
+</tr>
+<tr>
+<td>reviews</td>
+<td>Stores customer reviews and ratings for completed orders.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="32-main-relationships">3.2 Main Relationships</h2>
+<p>The schema uses one-to-many and one-to-one relationships to represent the food-delivery business process.</p>
+<table>
+<thead>
+<tr>
+<th>Relationship</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users → user_addresses</td>
+<td>One-to-many</td>
+<td>One user can have multiple saved delivery addresses.</td>
+</tr>
+<tr>
+<td>users → restaurants</td>
+<td>One-to-many</td>
+<td>One restaurant owner can manage multiple restaurants.</td>
+</tr>
+<tr>
+<td>restaurant_categories → restaurants</td>
+<td>One-to-many</td>
+<td>One category can include multiple restaurants.</td>
+</tr>
+<tr>
+<td>restaurants → menu_items</td>
+<td>One-to-many</td>
+<td>One restaurant can have many menu items.</td>
+</tr>
+<tr>
+<td>users → orders</td>
+<td>One-to-many</td>
+<td>One customer can create many orders.</td>
+</tr>
+<tr>
+<td>restaurants → orders</td>
+<td>One-to-many</td>
+<td>One restaurant can receive many orders.</td>
+</tr>
+<tr>
+<td>orders → order_items</td>
+<td>One-to-many</td>
+<td>One order can contain many menu items.</td>
+</tr>
+<tr>
+<td>menu_items → order_items</td>
+<td>One-to-many</td>
+<td>One menu item can appear in many order items.</td>
+</tr>
+<tr>
+<td>orders → payments</td>
+<td>One-to-one</td>
+<td>One order has one payment record.</td>
+</tr>
+<tr>
+<td>orders → deliveries</td>
+<td>One-to-one</td>
+<td>One order has one delivery record.</td>
+</tr>
+<tr>
+<td>couriers → deliveries</td>
+<td>One-to-many</td>
+<td>One courier can handle many deliveries over time.</td>
+</tr>
+<tr>
+<td>orders → order_status_history</td>
+<td>One-to-many</td>
+<td>One order can have multiple status history records.</td>
+</tr>
+<tr>
+<td>orders → reviews</td>
+<td>One-to-one</td>
+<td>One completed order can have one review.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="33-er-diagram">3.3 ER Diagram</h2>
+<p>The ER diagram below summarizes the main database entities and relationships.</p>
+<pre><code class="language-mermaid">erDiagram
+    users ||--o{ user_addresses : has
+    users ||--o{ restaurants : owns
+    users ||--o{ orders : places
+    users ||--o{ reviews : writes
+
+    restaurant_categories ||--o{ restaurants : categorizes
+
+    restaurants ||--o{ menu_items : offers
+    restaurants ||--o{ orders : receives
+    restaurants ||--o{ reviews : receives
+
+    orders ||--o{ order_items : contains
+    menu_items ||--o{ order_items : included_in
+
+    orders ||--|| payments : has
+    orders ||--|| deliveries : has
+    orders ||--o{ order_status_history : tracks
+    orders ||--o| reviews : reviewed_by
+
+    couriers ||--o{ deliveries : handles
+
+    users {
+        int id PK
+        string full_name
+        string email
+        string password_hash
+        string role
+        datetime created_at
+    }
+
+    user_addresses {
+        int id PK
+        int user_id FK
+        string address_line
+        string city
+        string phone_number
+    }
+
+    restaurant_categories {
+        int id PK
+        string name
+    }
+
+    restaurants {
+        int id PK
+        int owner_id FK
+        int category_id FK
+        string name
+        string description
+        string address
+        boolean is_active
+    }
+
+    menu_items {
+        int id PK
+        int restaurant_id FK
+        string name
+        string description
+        decimal price
+        boolean is_available
+    }
+
+    orders {
+        int id PK
+        int user_id FK
+        int restaurant_id FK
+        string status
+        decimal total_price
+        datetime created_at
+    }
+
+    order_items {
+        int id PK
+        int order_id FK
+        int menu_item_id FK
+        int quantity
+        decimal unit_price
+    }
+
+    payments {
+        int id PK
+        int order_id FK
+        string payment_method
+        string payment_status
+        decimal amount
+    }
+
+    couriers {
+        int id PK
+        int user_id FK
+        string status
+    }
+
+    deliveries {
+        int id PK
+        int order_id FK
+        int courier_id FK
+        string delivery_status
+        datetime picked_up_at
+        datetime delivered_at
+    }
+
+    order_status_history {
+        int id PK
+        int order_id FK
+        string old_status
+        string new_status
+        datetime changed_at
+    }
+
+    reviews {
+        int id PK
+        int order_id FK
+        int user_id FK
+        int restaurant_id FK
+        int rating
+        string comment
+    }
+</code></pre>
+<hr />
+<h2 id="34-relational-schema-summary">3.4 Relational Schema Summary</h2>
+<p>The relational schema was implemented in PostgreSQL. The schema focuses on data integrity, normalized structure, and support for the main application workflows.</p>
+<p>The most important database tables are:</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users</td>
+<td>Stores platform users and roles.</td>
+</tr>
+<tr>
+<td>restaurants</td>
+<td>Stores restaurants connected to owners and categories.</td>
+</tr>
+<tr>
+<td>menu_items</td>
+<td>Stores available food items for each restaurant.</td>
+</tr>
+<tr>
+<td>orders</td>
+<td>Stores customer orders and order status.</td>
+</tr>
+<tr>
+<td>order_items</td>
+<td>Stores items selected inside each order.</td>
+</tr>
+<tr>
+<td>payments</td>
+<td>Stores payment information for orders.</td>
+</tr>
+<tr>
+<td>couriers</td>
+<td>Stores courier profiles and availability.</td>
+</tr>
+<tr>
+<td>deliveries</td>
+<td>Stores delivery assignment and delivery lifecycle.</td>
+</tr>
+<tr>
+<td>order_status_history</td>
+<td>Stores order status changes for tracking and audit.</td>
+</tr>
+<tr>
+<td>reviews</td>
+<td>Stores customer feedback and ratings.</td>
+</tr>
+</tbody>
+</table>
+<p>Primary keys are used to uniquely identify records. Foreign keys are used to enforce relationships between users, restaurants, orders, menu items, payments, deliveries, and reviews. Check constraints are used for controlled values such as user roles, order statuses, payment statuses, delivery statuses, courier statuses, quantities, prices, and ratings.</p>
+<hr />
+<h2 id="35-data-integrity-rules">3.5 Data Integrity Rules</h2>
+<p>Data integrity is enforced using the following mechanisms:</p>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary keys</td>
+<td>Each table has a unique identifier.</td>
+</tr>
+<tr>
+<td>Foreign keys</td>
+<td>Relationships between tables are enforced at the database level.</td>
+</tr>
+<tr>
+<td>Unique constraints</td>
+<td>Values such as user email and category names are kept unique where required.</td>
+</tr>
+<tr>
+<td>Check constraints</td>
+<td>Controlled fields such as status, role, price, quantity, and rating are validated.</td>
+</tr>
+<tr>
+<td>Not-null constraints</td>
+<td>Required fields cannot be empty.</td>
+</tr>
+</tbody>
+</table>
+<p>Examples of constrained fields include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Constraint Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users.role</td>
+<td>Allows only valid user roles such as customer, owner, courier, or admin.</td>
+</tr>
+<tr>
+<td>orders.status</td>
+<td>Allows only valid order statuses.</td>
+</tr>
+<tr>
+<td>payments.payment_status</td>
+<td>Allows only valid payment states.</td>
+</tr>
+<tr>
+<td>menu_items.price</td>
+<td>Prevents negative prices.</td>
+</tr>
+<tr>
+<td>order_items.quantity</td>
+<td>Prevents zero or negative quantities.</td>
+</tr>
+<tr>
+<td>reviews.rating</td>
+<td>Restricts ratings to the accepted range.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="36-database-migrations-and-seed-data">3.6 Database Migrations and Seed Data</h2>
+<p>Alembic was used for database migrations. The migration system allows the schema to be versioned and recreated consistently in different environments. The project includes migrations for creating the core food-delivery tables, adding performance indexes, and inserting initial seed data.</p>
+<p>Seed data was added to make the system testable during development and demonstration. The seed data includes sample users, restaurants, categories, menu items, orders, and related records. This allowed the frontend and backend teams to test the main user flow without manually inserting data each time.</p>
+<hr />
+<h2 id="37-indexing-and-optimization">3.7 Indexing and Optimization</h2>
+<p>Indexes were added to improve query performance for frequently accessed data. The most important query paths include restaurant search, restaurant menu loading, user order history, and order status tracking.</p>
+<p>Examples of optimization targets:</p>
+<table>
+<thead>
+<tr>
+<th>Query Area</th>
+<th>Optimization Goal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurant list</td>
+<td>Faster loading of active restaurants.</td>
+</tr>
+<tr>
+<td>Restaurant menu</td>
+<td>Faster lookup of menu items by restaurant.</td>
+</tr>
+<tr>
+<td>User orders</td>
+<td>Faster retrieval of orders by user and creation time.</td>
+</tr>
+<tr>
+<td>Order status</td>
+<td>Faster lookup of order status and history.</td>
+</tr>
+<tr>
+<td>Restaurant search</td>
+<td>Faster text search by restaurant name.</td>
+</tr>
+</tbody>
+</table>
+<p>These optimizations support the frontend flow and improve the responsiveness of the application during testing and demonstration.</p>
+<hr />
+<h1 id="4-system-architecture">4. System Architecture</h1>
+<h2 id="41-architecture-overview">4.1 Architecture Overview</h2>
+<p>The system architecture of the food-delivery marketplace follows a containerized full-stack design. The frontend, backend, database, cache, gateway, and observability services run as separate Docker containers. This separation makes the system easier to develop, test, deploy, and monitor.</p>
+<p>The user accesses the application through the browser. The browser sends requests to the Nginx API Gateway. Nginx works as the single public entry point and routes traffic to the React frontend and FastAPI backend replicas. The backend communicates with PostgreSQL for persistent data storage and Redis for cache-related operations.</p>
+<p>The architecture also includes WebSocket support for real-time order status updates. When a customer opens the order status page, the frontend establishes a WebSocket connection with the backend through the gateway. When the order status changes, the backend sends an update to the frontend without requiring a page refresh.</p>
+<p>The observability layer includes Prometheus for metrics collection, Grafana for dashboards, Loki for logs, and Promtail for log forwarding.</p>
+<hr />
+<h2 id="42-high-level-system-architecture-diagram">4.2 High-Level System Architecture Diagram</h2>
+<pre><code class="language-mermaid">flowchart LR
+    User[Customer Browser] --&gt; Frontend[React + Vite Frontend]
+
+    Frontend --&gt; Gateway[Nginx API Gateway]
+
+    Gateway --&gt; Backend1[FastAPI Backend Replica 1]
+    Gateway --&gt; Backend2[FastAPI Backend Replica 2]
+
+    Backend1 --&gt; PostgreSQL[(PostgreSQL Database)]
+    Backend2 --&gt; PostgreSQL
+
+    Backend1 --&gt; Redis[(Redis Cache)]
+    Backend2 --&gt; Redis
+
+    Backend1 --&gt; WebSocket[WebSocket Order Updates]
+    Backend2 --&gt; WebSocket
+
+    Backend1 --&gt; RateLimiter[Token Bucket Rate Limiter]
+    Backend2 --&gt; RateLimiter
+
+    Backend1 --&gt; BatchPipeline[Daily Settlement Batch Pipeline]
+    Backend2 --&gt; BatchPipeline
+
+    BatchPipeline --&gt; PostgreSQL
+
+    Prometheus[Prometheus] --&gt; Backend1
+    Prometheus --&gt; Backend2
+
+    Grafana[Grafana Dashboard] --&gt; Prometheus
+
+    Promtail[Promtail] --&gt; Loki[Loki Logs]
+    Loki --&gt; Grafana
+</code></pre>
+<p>The diagram shows the main runtime architecture. The frontend communicates through the gateway rather than directly accessing backend containers. The gateway routes REST and WebSocket traffic to the backend replicas. PostgreSQL stores persistent relational data, and Redis supports additional fast data access. Observability components monitor and log system behavior.</p>
+<hr />
+<h2 id="43-main-components">4.3 Main Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>React + Vite</td>
+<td>Provides user interface for restaurant browsing, menu viewing, cart, order creation, and order status tracking.</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>FastAPI</td>
+<td>Provides REST APIs, WebSocket endpoint, business logic, rate limiting, and database access.</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>PostgreSQL</td>
+<td>Stores persistent relational business data.</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>Redis</td>
+<td>Provides additional data store and cache design for frequently accessed data.</td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td>Nginx</td>
+<td>Routes public traffic to frontend and backend services.</td>
+</tr>
+<tr>
+<td>Container Orchestration</td>
+<td>Docker Compose</td>
+<td>Runs the full multi-container system.</td>
+</tr>
+<tr>
+<td>Metrics</td>
+<td>Prometheus</td>
+<td>Collects service metrics.</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>Grafana</td>
+<td>Visualizes metrics and logs.</td>
+</tr>
+<tr>
+<td>Logs</td>
+<td>Loki + Promtail</td>
+<td>Collects and queries application/container logs.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="44-request-flow">4.4 Request Flow</h2>
+<p>The typical request flow is:</p>
+<pre><code class="language-text">User Browser
+→ Nginx Gateway
+→ FastAPI Backend Replica
+→ PostgreSQL / Redis
+→ Backend Response
+→ Nginx Gateway
+→ Frontend
+</code></pre>
+<p>For example, when a customer opens the restaurant list page, the frontend calls the restaurant API endpoint through Nginx. Nginx forwards the request to one of the backend replicas. The backend retrieves data from the database or mock data layer and returns the response to the frontend.</p>
+<hr />
+<h2 id="45-websocket-flow">4.5 WebSocket Flow</h2>
+<p>The WebSocket flow is used for live order status updates:</p>
+<pre><code class="language-text">Order Status Page
+→ WebSocket connection through Nginx
+→ Backend WebSocket endpoint
+→ Status update event
+→ Frontend updates status in real time
+</code></pre>
+<p>The WebSocket endpoint follows this pattern:</p>
+<pre><code class="language-text">/ws/orders/{order_id}
+</code></pre>
+<p>The frontend displays the WebSocket connection state on the order status page. During final testing, the page showed:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<p>This confirms that the real-time update channel was working through the Docker Compose and Nginx setup.</p>
+<hr />
+<h2 id="46-deployment-oriented-structure">4.6 Deployment-Oriented Structure</h2>
+<p>The system is structured to be deployed as a set of services instead of one monolithic process. Each service has a focused responsibility. This makes the project closer to a real-world deployment model.</p>
+<p>The main deployment characteristics are:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single public entry point</td>
+<td>Nginx gateway on port 80.</td>
+</tr>
+<tr>
+<td>Backend replication</td>
+<td>Two FastAPI backend containers.</td>
+</tr>
+<tr>
+<td>Persistent database</td>
+<td>PostgreSQL container with named volume.</td>
+</tr>
+<tr>
+<td>Cache/additional store</td>
+<td>Redis container.</td>
+</tr>
+<tr>
+<td>Observability stack</td>
+<td>Prometheus, Grafana, Loki, and Promtail.</td>
+</tr>
+<tr>
+<td>Local deployment</td>
+<td>Docker Compose.</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Environment variables and <code>.env</code> file.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="47-architecture-limitations">4.7 Architecture Limitations</h2>
+<p>The architecture is suitable for a course-level prototype, but it has some limitations:</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single PostgreSQL instance</td>
+<td>The database is not replicated in the prototype.</td>
+</tr>
+<tr>
+<td>Single Redis instance</td>
+<td>Redis is not configured as a cluster.</td>
+</tr>
+<tr>
+<td>Demo secrets</td>
+<td>Environment variables use demo values and should be replaced in production.</td>
+</tr>
+<tr>
+<td>Local deployment focus</td>
+<td>The project is mainly tested through local Docker Compose.</td>
+</tr>
+<tr>
+<td>Limited production hardening</td>
+<td>HTTPS, advanced authentication, and production-grade secret management are future improvements.</td>
+</tr>
+</tbody>
+</table>
+<p>Despite these limitations, the architecture demonstrates the required full-stack system design, API gateway usage, backend replicas, real-time communication, database integration, and observability.</p>
+<hr />
+<h1 id="5-api-design">5. API Design</h1>
+<h2 id="51-api-overview">5.1 API Overview</h2>
+<p>The backend exposes REST API endpoints for the main food-delivery marketplace operations. The frontend uses these endpoints to load restaurants, display restaurant menus, create orders, retrieve order status, and update order status during the demonstration.</p>
+<p>The system also includes a WebSocket endpoint for live order status updates. REST is used for request-response operations, while WebSocket is used for real-time communication.</p>
+<p>The API is accessed through the Nginx API Gateway. In the Docker Compose environment, the frontend uses the gateway URLs:</p>
+<pre><code class="language-text">REST API base URL: http://localhost/api
+WebSocket base URL: ws://localhost/ws
+</code></pre>
+<hr />
+<h2 id="52-rest-api-endpoints">5.2 REST API Endpoints</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/restaurants</code></td>
+<td>Returns the list of available restaurants.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/restaurants/{restaurant_id}/menu</code></td>
+<td>Returns menu items for a selected restaurant.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/orders</code></td>
+<td>Creates a new customer order.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/{order_id}</code></td>
+<td>Returns order details and current status.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/orders/{order_id}/status</code></td>
+<td>Updates the status of an order.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/couriers</code></td>
+<td>Returns courier-related data.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/register</code></td>
+<td>Registers a user account.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>Authenticates a user.</td>
+</tr>
+</tbody>
+</table>
+<p>The frontend mainly uses the restaurant, menu, order creation, order retrieval, and order status update endpoints.</p>
+<hr />
+<h2 id="53-restaurant-list-endpoint">5.3 Restaurant List Endpoint</h2>
+<h3 id="request">Request</h3>
+<pre><code class="language-http">GET /api/restaurants
+</code></pre>
+<h3 id="response-example">Response Example</h3>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;Pizza House&quot;,
+    &quot;description&quot;: &quot;Italian pizza, pasta and drinks&quot;,
+    &quot;address&quot;: &quot;Main Street 12&quot;,
+    &quot;rating&quot;: 4.6
+  }
+]
+</code></pre>
+<h3 id="usage">Usage</h3>
+<p>This endpoint is used by the restaurant list page. The frontend calls the endpoint when the user opens the marketplace home page.</p>
+<hr />
+<h2 id="54-restaurant-menu-endpoint">5.4 Restaurant Menu Endpoint</h2>
+<h3 id="request_1">Request</h3>
+<pre><code class="language-http">GET /api/restaurants/{restaurant_id}/menu
+</code></pre>
+<h3 id="response-example_1">Response Example</h3>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: 101,
+    &quot;restaurant_id&quot;: 1,
+    &quot;name&quot;: &quot;Margherita Pizza&quot;,
+    &quot;description&quot;: &quot;Classic pizza with tomato and cheese&quot;,
+    &quot;price&quot;: 8.99
+  }
+]
+</code></pre>
+<h3 id="usage_1">Usage</h3>
+<p>This endpoint is used by the menu page. When the customer clicks “View menu”, the frontend requests menu items for the selected restaurant.</p>
+<hr />
+<h2 id="55-order-creation-endpoint">5.5 Order Creation Endpoint</h2>
+<h3 id="request_2">Request</h3>
+<pre><code class="language-http">POST /api/orders
+</code></pre>
+<h3 id="request-body-example">Request Body Example</h3>
+<pre><code class="language-json">{
+  &quot;restaurant_id&quot;: 1,
+  &quot;customer_id&quot;: 1,
+  &quot;delivery_address&quot;: &quot;Demo address, Tashkent&quot;,
+  &quot;total_price&quot;: 19.98,
+  &quot;items&quot;: [
+    {
+      &quot;menu_item_id&quot;: 101,
+      &quot;quantity&quot;: 1
+    },
+    {
+      &quot;menu_item_id&quot;: 102,
+      &quot;quantity&quot;: 1
+    }
+  ]
+}
+</code></pre>
+<h3 id="response-example_2">Response Example</h3>
+<pre><code class="language-json">{
+  &quot;id&quot;: 1001,
+  &quot;status&quot;: &quot;created&quot;
+}
+</code></pre>
+<h3 id="usage_2">Usage</h3>
+<p>This endpoint is called from the cart page when the customer clicks “Create order”. After the order is created, the frontend redirects the user to the order status page.</p>
+<hr />
+<h2 id="56-order-status-endpoint">5.6 Order Status Endpoint</h2>
+<h3 id="request_3">Request</h3>
+<pre><code class="language-http">GET /api/orders/{order_id}
+</code></pre>
+<h3 id="response-example_3">Response Example</h3>
+<pre><code class="language-json">{
+  &quot;id&quot;: 1001,
+  &quot;status&quot;: &quot;created&quot;,
+  &quot;total_price&quot;: 19.98,
+  &quot;items&quot;: [
+    {
+      &quot;menu_item_id&quot;: 101,
+      &quot;quantity&quot;: 1
+    }
+  ]
+}
+</code></pre>
+<h3 id="usage_3">Usage</h3>
+<p>This endpoint is used by the order status page. The frontend loads the current order details before opening the WebSocket connection.</p>
+<hr />
+<h2 id="57-order-status-update-endpoint">5.7 Order Status Update Endpoint</h2>
+<h3 id="request_4">Request</h3>
+<pre><code class="language-http">PATCH /api/orders/{order_id}/status
+</code></pre>
+<h3 id="request-body-example_1">Request Body Example</h3>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;confirmed&quot;
+}
+</code></pre>
+<h3 id="response-example_4">Response Example</h3>
+<pre><code class="language-json">{
+  &quot;id&quot;: 1001,
+  &quot;status&quot;: &quot;confirmed&quot;
+}
+</code></pre>
+<h3 id="usage_4">Usage</h3>
+<p>This endpoint is used during demonstration to move an order through the status lifecycle:</p>
+<pre><code class="language-text">created → confirmed → preparing → picked_up → delivered
+</code></pre>
+<hr />
+<h2 id="58-websocket-endpoint">5.8 WebSocket Endpoint</h2>
+<p>The WebSocket endpoint is used for live order status updates.</p>
+<h3 id="endpoint">Endpoint</h3>
+<pre><code class="language-text">/ws/orders/{order_id}
+</code></pre>
+<h3 id="message-example">Message Example</h3>
+<pre><code class="language-json">{
+  &quot;order_id&quot;: 1001,
+  &quot;status&quot;: &quot;preparing&quot;
+}
+</code></pre>
+<h3 id="frontend-behavior">Frontend Behavior</h3>
+<p>When the order status page opens, the frontend connects to the WebSocket endpoint for that order. If the connection is successful, the page shows:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<p>When the backend sends a status update message, the frontend updates the displayed status without refreshing the page.</p>
+<hr />
+<h2 id="59-api-design-notes">5.9 API Design Notes</h2>
+<p>The API design separates standard request-response operations from real-time updates:</p>
+<table>
+<thead>
+<tr>
+<th>Communication Type</th>
+<th>Used For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REST API</td>
+<td>Restaurants, menus, order creation, order retrieval, order status update.</td>
+</tr>
+<tr>
+<td>WebSocket</td>
+<td>Live order status updates.</td>
+</tr>
+</tbody>
+</table>
+<p>This design keeps the API simple while still demonstrating an additional API style for real-time communication.</p>
+<hr />
+<h2 id="510-api-limitations">5.10 API Limitations</h2>
+<p>The current API implementation is suitable for a course project prototype. However, several improvements would be needed for a production system:</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Demo authentication</td>
+<td>Add full role-based authentication and authorization.</td>
+</tr>
+<tr>
+<td>Limited validation in prototype flow</td>
+<td>Add stronger validation for all request payloads.</td>
+</tr>
+<tr>
+<td>Simple order status update logic</td>
+<td>Add role-based restrictions for who can update order status.</td>
+</tr>
+<tr>
+<td>Local Docker URLs</td>
+<td>Replace local URLs with production domain and HTTPS.</td>
+</tr>
+<tr>
+<td>Prototype WebSocket behavior</td>
+<td>Add reconnection strategy and persistent event delivery.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="6-data-layer-design">6. Data-Layer Design</h1>
+<h2 id="61-data-layer-overview">6.1 Data-Layer Overview</h2>
+<p>The data layer of the food-delivery marketplace is implemented using PostgreSQL, SQLAlchemy, Alembic migrations, and Redis cache design. PostgreSQL is used as the primary relational database because the project requires structured data, relationships, constraints, transactions, and query optimization.</p>
+<p>The data layer supports the main business workflow of the system:</p>
+<pre><code class="language-text">Customer
+→ Restaurant
+→ Menu Items
+→ Order
+→ Order Items
+→ Payment
+→ Delivery
+→ Status History
+→ Review
+</code></pre>
+<p>The database schema was designed to represent the main entities of the food-delivery marketplace and to maintain referential integrity between them.</p>
+<hr />
+<h2 id="62-postgresql-schema">6.2 PostgreSQL Schema</h2>
+<p>The relational schema includes the following main tables:</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users</td>
+<td>Stores customers, restaurant owners, couriers, and admins.</td>
+</tr>
+<tr>
+<td>user_addresses</td>
+<td>Stores saved delivery addresses for users.</td>
+</tr>
+<tr>
+<td>restaurant_categories</td>
+<td>Stores restaurant category names.</td>
+</tr>
+<tr>
+<td>restaurants</td>
+<td>Stores restaurants, owners, categories, and restaurant details.</td>
+</tr>
+<tr>
+<td>menu_items</td>
+<td>Stores food items offered by restaurants.</td>
+</tr>
+<tr>
+<td>orders</td>
+<td>Stores customer orders and current order status.</td>
+</tr>
+<tr>
+<td>order_items</td>
+<td>Stores individual items inside an order.</td>
+</tr>
+<tr>
+<td>payments</td>
+<td>Stores payment information for each order.</td>
+</tr>
+<tr>
+<td>couriers</td>
+<td>Stores courier profile and availability status.</td>
+</tr>
+<tr>
+<td>deliveries</td>
+<td>Stores courier assignment and delivery status.</td>
+</tr>
+<tr>
+<td>order_status_history</td>
+<td>Stores changes in order status over time.</td>
+</tr>
+<tr>
+<td>reviews</td>
+<td>Stores customer ratings and comments.</td>
+</tr>
+</tbody>
+</table>
+<p>The schema is normalized to avoid unnecessary duplication. For example, order-level data is stored in the <code>orders</code> table, while individual food items inside an order are stored in the <code>order_items</code> table.</p>
+<hr />
+<h2 id="63-sqlalchemy-models">6.3 SQLAlchemy Models</h2>
+<p>SQLAlchemy models are used to represent database tables in the backend application. Each model corresponds to a relational table and defines columns, data types, relationships, and constraints.</p>
+<p>The backend uses SQLAlchemy models for:</p>
+<table>
+<thead>
+<tr>
+<th>Model Area</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User models</td>
+<td>Represent platform users and roles.</td>
+</tr>
+<tr>
+<td>Restaurant models</td>
+<td>Represent restaurants and menu items.</td>
+</tr>
+<tr>
+<td>Order models</td>
+<td>Represent orders and order items.</td>
+</tr>
+<tr>
+<td>Courier models</td>
+<td>Represent courier and delivery data.</td>
+</tr>
+<tr>
+<td>Payment models</td>
+<td>Represent payment records and statuses.</td>
+</tr>
+<tr>
+<td>Review models</td>
+<td>Represent customer feedback.</td>
+</tr>
+</tbody>
+</table>
+<p>Using ORM models allows the backend to interact with database records through Python classes while still preserving relational database structure.</p>
+<hr />
+<h2 id="64-alembic-migrations">6.4 Alembic Migrations</h2>
+<p>Alembic is used for database schema migrations. Migrations make the database structure version-controlled and reproducible across different environments.</p>
+<p>The project includes migrations for:</p>
+<table>
+<thead>
+<tr>
+<th>Migration Purpose</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core schema creation</td>
+<td>Creates the main food-delivery marketplace tables.</td>
+</tr>
+<tr>
+<td>Backend core tables</td>
+<td>Adds backend-specific schema structure.</td>
+</tr>
+<tr>
+<td>Performance indexes</td>
+<td>Adds indexes for frequently queried fields.</td>
+</tr>
+<tr>
+<td>Seed data</td>
+<td>Inserts initial demo data for testing.</td>
+</tr>
+</tbody>
+</table>
+<p>This approach allows the team to recreate and update the database schema consistently using migration commands.</p>
+<hr />
+<h2 id="65-seed-data">6.5 Seed Data</h2>
+<p>Seed data was added to support development and demonstration. It allows the system to show meaningful data immediately after setup.</p>
+<p>Seed data includes:</p>
+<table>
+<thead>
+<tr>
+<th>Seed Data Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Users</td>
+<td>Demo customers, owners, couriers, and admins.</td>
+</tr>
+<tr>
+<td>Restaurants</td>
+<td>Sample restaurants for the marketplace.</td>
+</tr>
+<tr>
+<td>Categories</td>
+<td>Restaurant categories.</td>
+</tr>
+<tr>
+<td>Menu items</td>
+<td>Food items connected to restaurants.</td>
+</tr>
+<tr>
+<td>Orders</td>
+<td>Example orders for testing status flow.</td>
+</tr>
+<tr>
+<td>Related records</td>
+<td>Payments, deliveries, and status history where applicable.</td>
+</tr>
+</tbody>
+</table>
+<p>Seed data helped the frontend and backend teams test the application without manually inserting records every time.</p>
+<hr />
+<h2 id="66-constraints-and-validation">6.6 Constraints and Validation</h2>
+<p>The database uses constraints to enforce data correctness.</p>
+<table>
+<thead>
+<tr>
+<th>Constraint Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary key</td>
+<td>Uniquely identifies each record.</td>
+</tr>
+<tr>
+<td>Foreign key</td>
+<td>Enforces relationships between tables.</td>
+</tr>
+<tr>
+<td>Unique constraint</td>
+<td>Prevents duplicate values where required.</td>
+</tr>
+<tr>
+<td>Check constraint</td>
+<td>Restricts fields to valid values.</td>
+</tr>
+<tr>
+<td>Not-null constraint</td>
+<td>Ensures required fields are provided.</td>
+</tr>
+</tbody>
+</table>
+<p>Examples of validation rules:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users.email</td>
+<td>Must be unique.</td>
+</tr>
+<tr>
+<td>users.role</td>
+<td>Must be one of the allowed user roles.</td>
+</tr>
+<tr>
+<td>orders.status</td>
+<td>Must follow allowed order statuses.</td>
+</tr>
+<tr>
+<td>payments.payment_status</td>
+<td>Must use valid payment status values.</td>
+</tr>
+<tr>
+<td>menu_items.price</td>
+<td>Must be greater than or equal to zero.</td>
+</tr>
+<tr>
+<td>order_items.quantity</td>
+<td>Must be greater than zero.</td>
+</tr>
+<tr>
+<td>reviews.rating</td>
+<td>Must be within the accepted rating range.</td>
+</tr>
+</tbody>
+</table>
+<p>These rules reduce invalid data and improve system reliability.</p>
+<hr />
+<h2 id="67-indexing-strategy">6.7 Indexing Strategy</h2>
+<p>Indexes were added to improve performance for common queries. The main goal of indexing is to speed up data retrieval for the most frequently used application operations.</p>
+<p>Important query patterns include:</p>
+<table>
+<thead>
+<tr>
+<th>Query Pattern</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Get restaurants by active status and category</td>
+<td>Used by restaurant browsing.</td>
+</tr>
+<tr>
+<td>Get menu items by restaurant ID</td>
+<td>Used by menu page loading.</td>
+</tr>
+<tr>
+<td>Get orders by user ID and creation time</td>
+<td>Used for customer order history.</td>
+</tr>
+<tr>
+<td>Get orders by restaurant ID and status</td>
+<td>Used for restaurant order management.</td>
+</tr>
+<tr>
+<td>Get order status history by order ID</td>
+<td>Used for tracking and audit.</td>
+</tr>
+<tr>
+<td>Search restaurants by name</td>
+<td>Used for restaurant search optimization.</td>
+</tr>
+</tbody>
+</table>
+<p>Indexes improve response time, especially as the amount of data grows.</p>
+<hr />
+<h2 id="68-redis-cache-design">6.8 Redis Cache Design</h2>
+<p>Redis is used as an implemented additional data store and cache layer. The purpose of Redis is to reduce repeated database reads for frequently accessed data and to support short-lived state.</p>
+<p>In the current implementation, Redis caching is used for the restaurant list and restaurant menu endpoints. The backend first checks Redis before reading from PostgreSQL. If cached data exists, the backend returns the cached JSON response. If the cache is empty, the backend queries PostgreSQL and stores the result in Redis with a time-to-live value.</p>
+<p>Implemented cache targets include:</p>
+<table>
+<thead>
+<tr>
+<th>Cache Target</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurant list</td>
+<td>Frequently loaded by customers.</td>
+</tr>
+<tr>
+<td>Restaurant menu</td>
+<td>Frequently loaded after selecting a restaurant.</td>
+</tr>
+<tr>
+<td>Order status</td>
+<td>Frequently checked by the order status page.</td>
+</tr>
+<tr>
+<td>Rate limiter counters</td>
+<td>Useful for request limiting logic.</td>
+</tr>
+</tbody>
+</table>
+<p>Example Redis key patterns:</p>
+<table>
+<thead>
+<tr>
+<th>Key Pattern</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>restaurants:list</code></td>
+<td>Cached list of active restaurants.</td>
+</tr>
+<tr>
+<td><code>restaurants:{restaurant_id}:menu</code></td>
+<td>Cached menu items for a selected restaurant.</td>
+</tr>
+<tr>
+<td><code>restaurants:active</code></td>
+<td>Cache active restaurant list.</td>
+</tr>
+<tr>
+<td><code>restaurant:{id}:menu</code></td>
+<td>Cache menu items for a restaurant.</td>
+</tr>
+<tr>
+<td><code>order:{id}:status</code></td>
+<td>Cache current order status.</td>
+</tr>
+<tr>
+<td><code>rate_limit:{client_id}</code></td>
+<td>Store rate limiter token/counter state.</td>
+</tr>
+</tbody>
+</table>
+<p>Redis improves responsiveness and reduces unnecessary load on PostgreSQL.</p>
+<p>Despite these limitations, the data layer demonstrates relational database design, schema migration, seed data, constraints, indexes, and implemented Redis caching for frequently accessed restaurant and menu data.</p>
+<hr />
+<h2 id="69-data-access-flow">6.9 Data Access Flow</h2>
+<p>A typical data access flow is:</p>
+<pre><code class="language-text">Frontend request
+→ Nginx Gateway
+→ FastAPI Backend
+→ SQLAlchemy Session
+→ PostgreSQL
+→ Backend Response
+→ Frontend
+</code></pre>
+<p>When caching is used, the flow can be:</p>
+<pre><code class="language-text">Frontend request
+→ Nginx Gateway
+→ FastAPI Backend
+→ Redis cache check
+→ Return cached data if available
+→ Otherwise query PostgreSQL
+→ Store result in Redis
+→ Return response
+</code></pre>
+<p>This design allows the system to combine reliable relational storage with faster cache-based access.</p>
+<hr />
+<h2 id="610-data-layer-limitations">6.10 Data-Layer Limitations</h2>
+<p>The current data layer is suitable for a course prototype, but it has limitations:</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single PostgreSQL container</td>
+<td>Use managed PostgreSQL or replication in production.</td>
+</tr>
+<tr>
+<td>Single Redis container</td>
+<td>Use Redis replication or cluster mode.</td>
+</tr>
+<tr>
+<td>Prototype seed data</td>
+<td>Add larger and more realistic datasets for performance testing.</td>
+</tr>
+<tr>
+<td>Limited advanced analytics</td>
+<td>Add reporting tables or warehouse design for analytics.</td>
+</tr>
+<tr>
+<td>Basic cache invalidation</td>
+<td>Improve cache invalidation rules for production use.</td>
+</tr>
+</tbody>
+</table>
+<p>Despite these limitations, the data layer demonstrates relational database design, schema migration, seed data, constraints, indexes, and implemented Redis caching.</p>
+<hr />
+<h1 id="7-batch-pipeline">7. Batch Pipeline</h1>
+<h2 id="71-pipeline-overview">7.1 Pipeline Overview</h2>
+<p>The project includes a daily restaurant settlement batch pipeline. The purpose of this pipeline is to calculate how much revenue each restaurant earned from completed orders and how much should be paid out after platform commission.</p>
+<p>In a real food-delivery marketplace, restaurants need regular settlement reports. These reports summarize completed orders, total order value, platform commission, and final payout amount. The pipeline was designed to represent this business process.</p>
+<p>The pipeline is not part of the interactive customer flow. Instead, it is a scheduled backend process that runs periodically, such as once per day.</p>
+<hr />
+<h2 id="72-pipeline-goal">7.2 Pipeline Goal</h2>
+<p>The main goal of the batch settlement pipeline is to process completed orders and generate settlement data for restaurants.</p>
+<p>The pipeline answers the following questions:</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Which orders were completed today?</td>
+<td>The pipeline filters orders with final delivery status.</td>
+</tr>
+<tr>
+<td>Which restaurant received each order?</td>
+<td>Orders are grouped by restaurant.</td>
+</tr>
+<tr>
+<td>What was the total revenue?</td>
+<td>Order totals are summed for each restaurant.</td>
+</tr>
+<tr>
+<td>What commission should the platform take?</td>
+<td>A platform commission rate is applied.</td>
+</tr>
+<tr>
+<td>What amount should be paid to each restaurant?</td>
+<td>Final payout is calculated after commission.</td>
+</tr>
+<tr>
+<td>Was the pipeline executed successfully?</td>
+<td>Execution logs are written for audit and debugging.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="73-pipeline-input-and-output">7.3 Pipeline Input and Output</h2>
+<h3 id="input">Input</h3>
+<p>The pipeline uses data from PostgreSQL.</p>
+<p>Main input tables:</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orders</td>
+<td>Provides order ID, restaurant ID, status, total price, and creation time.</td>
+</tr>
+<tr>
+<td>order_items</td>
+<td>Provides item-level details for orders.</td>
+</tr>
+<tr>
+<td>restaurants</td>
+<td>Provides restaurant information.</td>
+</tr>
+<tr>
+<td>payments</td>
+<td>Provides payment status and amount.</td>
+</tr>
+<tr>
+<td>deliveries</td>
+<td>Provides delivery completion status.</td>
+</tr>
+</tbody>
+</table>
+<p>The most important input condition is that orders must be completed or delivered before being included in settlement.</p>
+<h3 id="output">Output</h3>
+<p>The pipeline output is a settlement summary for each restaurant.</p>
+<p>Example output fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restaurant_id</td>
+<td>Identifier of the restaurant.</td>
+</tr>
+<tr>
+<td>settlement_date</td>
+<td>Date of the settlement calculation.</td>
+</tr>
+<tr>
+<td>completed_orders_count</td>
+<td>Number of completed orders.</td>
+</tr>
+<tr>
+<td>gross_revenue</td>
+<td>Total value of completed orders.</td>
+</tr>
+<tr>
+<td>platform_commission</td>
+<td>Commission amount taken by the platform.</td>
+</tr>
+<tr>
+<td>net_payout</td>
+<td>Final payout amount for the restaurant.</td>
+</tr>
+<tr>
+<td>execution_status</td>
+<td>Whether the pipeline finished successfully.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="74-bpmn-style-pipeline-diagram">7.4 BPMN-Style Pipeline Diagram</h2>
+<pre><code class="language-mermaid">flowchart LR
+    Start((Start: Daily scheduled job)) --&gt; ExtractOrders[Extract completed orders from PostgreSQL]
+
+    ExtractOrders --&gt; ValidateOrders{Are completed orders available?}
+
+    ValidateOrders -- No --&gt; NoData[Write no-data pipeline log]
+    NoData --&gt; EndNoData((End))
+
+    ValidateOrders -- Yes --&gt; GroupByRestaurant[Group orders by restaurant]
+
+    GroupByRestaurant --&gt; CalculateTotals[Calculate total revenue, commission, and payout]
+
+    CalculateTotals --&gt; GenerateSettlement[Generate settlement records]
+
+    GenerateSettlement --&gt; SaveSettlement[Save settlement results to database]
+
+    SaveSettlement --&gt; NotifyOwners[Prepare restaurant owner settlement summary]
+
+    NotifyOwners --&gt; WriteLog[Write pipeline execution log]
+
+    WriteLog --&gt; End((End: Settlement completed))
+</code></pre>
+<hr />
+<h2 id="75-pipeline-steps">7.5 Pipeline Steps</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Start scheduled job</td>
+<td>The pipeline starts automatically based on a daily schedule.</td>
+</tr>
+<tr>
+<td>2. Extract completed orders</td>
+<td>The system selects orders that were completed or delivered.</td>
+</tr>
+<tr>
+<td>3. Validate data</td>
+<td>The pipeline checks whether there are orders to process.</td>
+</tr>
+<tr>
+<td>4. Group by restaurant</td>
+<td>Completed orders are grouped by restaurant ID.</td>
+</tr>
+<tr>
+<td>5. Calculate totals</td>
+<td>Gross revenue, commission, and net payout are calculated.</td>
+</tr>
+<tr>
+<td>6. Generate settlement records</td>
+<td>Settlement rows are prepared for storage.</td>
+</tr>
+<tr>
+<td>7. Save results</td>
+<td>Settlement results are saved to the database.</td>
+</tr>
+<tr>
+<td>8. Write logs</td>
+<td>Pipeline execution information is written to logs.</td>
+</tr>
+<tr>
+<td>9. End job</td>
+<td>The batch process finishes successfully.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="76-error-handling">7.6 Error Handling</h2>
+<p>The pipeline should handle several possible problems:</p>
+<table>
+<thead>
+<tr>
+<th>Error Case</th>
+<th>Handling Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No completed orders</td>
+<td>Write a no-data log and finish successfully.</td>
+</tr>
+<tr>
+<td>Database connection error</td>
+<td>Log the error and mark the pipeline execution as failed.</td>
+</tr>
+<tr>
+<td>Invalid order data</td>
+<td>Skip invalid record or mark it for manual review.</td>
+</tr>
+<tr>
+<td>Calculation error</td>
+<td>Stop the pipeline, log details, and avoid saving incorrect results.</td>
+</tr>
+<tr>
+<td>Partial failure</td>
+<td>Use transactions to prevent incomplete settlement data.</td>
+</tr>
+</tbody>
+</table>
+<p>For a production version, the pipeline should also include retry logic, alerting, and detailed audit logs.</p>
+<hr />
+<h2 id="77-pipeline-limitations">7.7 Pipeline Limitations</h2>
+<p>The current pipeline is designed as a course-level prototype. It demonstrates the batch-processing concept, but it does not include all production-level requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Daily schedule is conceptual</td>
+<td>Add a real scheduler such as cron, Celery Beat, or Airflow.</td>
+</tr>
+<tr>
+<td>Settlement table may be simplified</td>
+<td>Add a dedicated settlement table with full audit fields.</td>
+</tr>
+<tr>
+<td>Limited financial rules</td>
+<td>Add tax, refunds, discounts, and restaurant-specific commission rules.</td>
+</tr>
+<tr>
+<td>Basic logging</td>
+<td>Add structured logs and alerting for failed jobs.</td>
+</tr>
+<tr>
+<td>No external payment integration</td>
+<td>Integrate real payment provider settlement reports.</td>
+</tr>
+</tbody>
+</table>
+<p>Despite these limitations, the pipeline demonstrates the required batch-processing design and connects directly to the food-delivery business scenario.</p>
+<hr />
+<h1 id="8-from-scratch-component-token-bucket-rate-limiter">8. From-Scratch Component: Token Bucket Rate Limiter</h1>
+<h2 id="81-component-overview">8.1 Component Overview</h2>
+<p>The from-scratch component implemented in this project is a Token Bucket Rate Limiter. Its purpose is to limit how frequently a client can send requests to the backend API. Rate limiting is important for protecting backend services from excessive traffic, accidental request loops, or simple abuse.</p>
+<p>The Token Bucket algorithm was selected because it is simple, efficient, and commonly used in backend systems. It allows normal request bursts while still enforcing an average request rate over time.</p>
+<hr />
+<h2 id="82-why-this-component-was-chosen">8.2 Why This Component Was Chosen</h2>
+<p>A food-delivery marketplace can receive many repeated API requests, especially from frontend pages that load restaurant lists, menus, order status, and WebSocket-related data. Without rate limiting, a client could send too many requests and overload the backend.</p>
+<p>The Token Bucket Rate Limiter was chosen because it supports:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Burst handling</td>
+<td>A client can send several requests quickly if tokens are available.</td>
+</tr>
+<tr>
+<td>Average rate control</td>
+<td>Tokens refill over time at a fixed rate.</td>
+</tr>
+<tr>
+<td>Simple implementation</td>
+<td>The algorithm can be implemented without external libraries.</td>
+</tr>
+<tr>
+<td>Backend protection</td>
+<td>It reduces the risk of excessive API requests.</td>
+</tr>
+<tr>
+<td>Demonstration value</td>
+<td>It is a clear from-scratch system component for the project.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="83-token-bucket-algorithm">8.3 Token Bucket Algorithm</h2>
+<p>The Token Bucket algorithm works with a bucket that stores tokens. Each client has a bucket. Every request consumes one token. Tokens are added back to the bucket over time. If the bucket has enough tokens, the request is allowed. If the bucket is empty, the request is rejected or delayed.</p>
+<p>The basic logic is:</p>
+<pre><code class="language-text">1. Create a bucket with a maximum capacity.
+2. Refill tokens over time.
+3. When a request arrives, check available tokens.
+4. If at least one token exists, allow the request and remove one token.
+5. If no token exists, reject the request with a rate-limit response.
+</code></pre>
+<hr />
+<h2 id="84-algorithm-parameters">8.4 Algorithm Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capacity</td>
+<td>Maximum number of tokens that can be stored in the bucket.</td>
+</tr>
+<tr>
+<td>Refill rate</td>
+<td>Number of tokens added per time interval.</td>
+</tr>
+<tr>
+<td>Current tokens</td>
+<td>Number of available tokens at the current moment.</td>
+</tr>
+<tr>
+<td>Last refill time</td>
+<td>Last time the bucket was updated.</td>
+</tr>
+<tr>
+<td>Client identifier</td>
+<td>Value used to track each client separately.</td>
+</tr>
+</tbody>
+</table>
+<p>Example:</p>
+<pre><code class="language-text">capacity = 10 tokens
+refill_rate = 1 token per second
+request_cost = 1 token
+</code></pre>
+<p>This means a client can make a burst of up to 10 requests, and then continue making requests at an average rate of 1 request per second.</p>
+<hr />
+<h2 id="85-backend-integration">8.5 Backend Integration</h2>
+<p>The rate limiter is integrated into the FastAPI backend. It can be applied to API routes to check whether a request should be processed. The backend identifies the client, checks the token bucket, and either allows or blocks the request.</p>
+<p>The simplified request flow is:</p>
+<pre><code class="language-text">Incoming request
+→ Rate limiter check
+→ Token available?
+    → Yes: continue to API handler
+    → No: return rate limit response
+</code></pre>
+<p>This allows the backend to protect sensitive or frequently used endpoints from excessive traffic.</p>
+<hr />
+<h2 id="86-pseudocode">8.6 Pseudocode</h2>
+<pre><code class="language-text">function allow_request(client_id):
+    bucket = get_bucket(client_id)
+
+    now = current_time()
+    elapsed = now - bucket.last_refill_time
+
+    tokens_to_add = elapsed * refill_rate
+    bucket.tokens = min(capacity, bucket.tokens + tokens_to_add)
+    bucket.last_refill_time = now
+
+    if bucket.tokens &gt;= 1:
+        bucket.tokens = bucket.tokens - 1
+        return true
+
+    return false
+</code></pre>
+<p>This pseudocode shows the core behavior of the rate limiter. The bucket is refilled based on elapsed time, and each allowed request consumes one token.</p>
+<hr />
+<h2 id="87-component-benefits">8.7 Component Benefits</h2>
+<table>
+<thead>
+<tr>
+<th>Benefit</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Protects backend</td>
+<td>Prevents too many requests from a single client.</td>
+</tr>
+<tr>
+<td>Supports bursts</td>
+<td>Allows short bursts of normal traffic.</td>
+</tr>
+<tr>
+<td>Simple logic</td>
+<td>Easy to understand and test.</td>
+</tr>
+<tr>
+<td>Low overhead</td>
+<td>Does not require heavy computation.</td>
+</tr>
+<tr>
+<td>Reusable</td>
+<td>Can be applied to multiple API endpoints.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="88-limitations">8.8 Limitations</h2>
+<p>The current implementation is suitable for a course-level prototype, but it has limitations.</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In-memory state</td>
+<td>Store token buckets in Redis for distributed backend replicas.</td>
+</tr>
+<tr>
+<td>Basic client identity</td>
+<td>Use authenticated user ID or IP address more consistently.</td>
+</tr>
+<tr>
+<td>Shared state across replicas</td>
+<td>Move token bucket state to Redis for fully distributed rate limiting.</td>
+</tr>
+<tr>
+<td>No dashboard for limiter events</td>
+<td>Add metrics for allowed and blocked requests.</td>
+</tr>
+<tr>
+<td>No advanced policies</td>
+<td>Add endpoint-specific limits and user-role-based limits.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="89-production-improvements">8.9 Production Improvements</h2>
+<p>For a production food-delivery system, the rate limiter should be improved by storing rate-limit state in Redis. This is important because the backend runs with multiple replicas. If rate-limit state is stored only in memory, each backend replica has its own independent bucket. Redis would allow all replicas to share the same rate-limit counters.</p>
+<p>Recommended production improvements:</p>
+<table>
+<thead>
+<tr>
+<th>Improvement</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis-backed buckets</td>
+<td>Shared state across backend replicas.</td>
+</tr>
+<tr>
+<td>Per-route limits</td>
+<td>Configure different limits for public, authenticated, and admin endpoints.</td>
+</tr>
+<tr>
+<td>Per-route limits</td>
+<td>Different limits for login, order creation, and general browsing.</td>
+</tr>
+<tr>
+<td>Metrics</td>
+<td>Monitor blocked requests and suspicious clients.</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Store capacity and refill rates in environment variables.</td>
+</tr>
+</tbody>
+</table>
+<p>The current implementation demonstrates the Token Bucket algorithm inside the backend and returns HTTP 429 Too Many Requests when the request limit is exceeded. Future improvements would make the limiter fully distributed by storing token bucket state in Redis and adding per-route configuration.</p>
+<hr />
+<h1 id="9-infrastructure-and-deployment">9. Infrastructure and Deployment</h1>
+<h2 id="91-infrastructure-overview">9.1 Infrastructure Overview</h2>
+<p>The infrastructure of the food-delivery marketplace is built with Docker Compose. The system is divided into multiple containers, each responsible for a specific part of the application. This design makes it possible to start the full stack with one command and keeps services isolated from each other.</p>
+<h2 id="90-digitalocean-vps-deployment">9.0 DigitalOcean VPS Deployment</h2>
+<p>The project was deployed on a DigitalOcean VPS to demonstrate public access outside the local development environment. The repository was cloned on the server, environment variables were configured, and the full container stack was started with Docker Compose.</p>
+<p>Public deployment URLs:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>http://138.68.88.189</td>
+</tr>
+<tr>
+<td>Swagger / OpenAPI</td>
+<td>http://138.68.88.189/docs</td>
+</tr>
+<tr>
+<td>Restaurant API</td>
+<td>http://138.68.88.189/api/restaurants</td>
+</tr>
+<tr>
+<td>Grafana</td>
+<td>http://138.68.88.189:3000/login</td>
+</tr>
+<tr>
+<td>Prometheus</td>
+<td>http://138.68.88.189:9090</td>
+</tr>
+<tr>
+<td>Loki readiness endpoint</td>
+<td>http://138.68.88.189:3100/ready</td>
+</tr>
+</tbody>
+</table>
+<p>The VPS deployment ran the same main services as the local Docker Compose environment: Nginx gateway, two FastAPI backend replicas, React frontend, PostgreSQL, Redis, Prometheus, Grafana, Loki, and Promtail.</p>
+<p>The infrastructure includes:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>frontend</td>
+<td>React + Vite</td>
+<td>User interface for customers.</td>
+</tr>
+<tr>
+<td>backend1</td>
+<td>FastAPI</td>
+<td>First backend replica for REST API and WebSocket logic.</td>
+</tr>
+<tr>
+<td>backend2</td>
+<td>FastAPI</td>
+<td>Second backend replica for load balancing demonstration.</td>
+</tr>
+<tr>
+<td>nginx</td>
+<td>Nginx</td>
+<td>API Gateway and single public entry point.</td>
+</tr>
+<tr>
+<td>postgres</td>
+<td>PostgreSQL</td>
+<td>Main relational database.</td>
+</tr>
+<tr>
+<td>redis</td>
+<td>Redis</td>
+<td>Cache and additional data store.</td>
+</tr>
+<tr>
+<td>prometheus</td>
+<td>Prometheus</td>
+<td>Metrics collection.</td>
+</tr>
+<tr>
+<td>grafana</td>
+<td>Grafana</td>
+<td>Metrics and logs dashboard.</td>
+</tr>
+<tr>
+<td>loki</td>
+<td>Loki</td>
+<td>Log storage and querying.</td>
+</tr>
+<tr>
+<td>promtail</td>
+<td>Promtail</td>
+<td>Log collection and forwarding to Loki.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="92-docker-compose-architecture">9.2 Docker Compose Architecture</h2>
+<p>The application is started using Docker Compose. Docker Compose creates a shared network for the services and starts all required containers.</p>
+<p>The main command used to start the system is:</p>
+<pre><code class="language-bash">docker compose up -d --build
+</code></pre>
+<p>The command used to stop the system is:</p>
+<pre><code class="language-bash">docker compose down
+</code></pre>
+<p>The container status can be checked with:</p>
+<pre><code class="language-bash">docker compose ps
+</code></pre>
+<p>During final testing, the following containers were running successfully:</p>
+<pre><code class="language-text">food_backend1
+food_backend2
+food_frontend
+food_gateway
+food_grafana
+food_loki
+food_postgres
+food_prometheus
+food_promtail
+food_redis
+</code></pre>
+<p>PostgreSQL and Redis were shown as healthy.</p>
+<hr />
+<h2 id="93-docker-infrastructure-diagram">9.3 Docker Infrastructure Diagram</h2>
+<pre><code class="language-mermaid">flowchart TB
+    Internet[User Browser] --&gt; Nginx[Nginx API Gateway&lt;br/&gt;Public Port: 80]
+
+    Nginx --&gt; Frontend[React Frontend Container&lt;br/&gt;Port: 5173]
+    Nginx --&gt; Backend1[FastAPI Backend Replica 1&lt;br/&gt;Port: 8001 -&gt; 8000]
+    Nginx --&gt; Backend2[FastAPI Backend Replica 2&lt;br/&gt;Port: 8002 -&gt; 8000]
+
+    Backend1 --&gt; Postgres[(PostgreSQL Container&lt;br/&gt;Host Port: 5433&lt;br/&gt;Container Port: 5432)]
+    Backend2 --&gt; Postgres
+
+    Backend1 --&gt; Redis[(Redis Container&lt;br/&gt;Port: 6379)]
+    Backend2 --&gt; Redis
+
+    Prometheus[Prometheus Container&lt;br/&gt;Port: 9090] --&gt; Backend1
+    Prometheus --&gt; Backend2
+
+    Grafana[Grafana Container&lt;br/&gt;Port: 3000] --&gt; Prometheus
+    Grafana --&gt; Loki
+
+    Promtail[Promtail Container] --&gt; Loki[Loki Container&lt;br/&gt;Port: 3100]
+
+    subgraph DockerCompose[Docker Compose Network]
+        Nginx
+        Frontend
+        Backend1
+        Backend2
+        Postgres
+        Redis
+        Prometheus
+        Grafana
+        Loki
+        Promtail
+    end
+</code></pre>
+<hr />
+<h2 id="94-nginx-api-gateway">9.4 Nginx API Gateway</h2>
+<p>Nginx is used as the API Gateway and the single public entry point of the system. The user accesses the application through:</p>
+<pre><code class="language-text">http://localhost
+</code></pre>
+<p>The gateway routes traffic to the correct internal service.</p>
+<table>
+<thead>
+<tr>
+<th>Traffic Type</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend traffic</td>
+<td>Routed to the frontend container.</td>
+</tr>
+<tr>
+<td>REST API traffic</td>
+<td>Routed to FastAPI backend replicas.</td>
+</tr>
+<tr>
+<td>WebSocket traffic</td>
+<td>Routed to the backend WebSocket endpoint.</td>
+</tr>
+</tbody>
+</table>
+<p>The gateway helps keep the public interface simple. Instead of exposing every service directly, the user interacts mainly with Nginx on port 80.</p>
+<hr />
+<h2 id="95-backend-replicas-and-load-balancing">9.5 Backend Replicas and Load Balancing</h2>
+<p>The backend runs with two FastAPI replicas:</p>
+<table>
+<thead>
+<tr>
+<th>Replica</th>
+<th>External Port</th>
+<th>Internal Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>backend1</td>
+<td>8001</td>
+<td>8000</td>
+</tr>
+<tr>
+<td>backend2</td>
+<td>8002</td>
+<td>8000</td>
+</tr>
+</tbody>
+</table>
+<p>This demonstrates a load-balanced backend architecture. Nginx routes requests to backend replicas. This design improves scalability compared to a single backend container and demonstrates how a real system can distribute API traffic.</p>
+<hr />
+<h2 id="96-postgresql-and-redis">9.6 PostgreSQL and Redis</h2>
+<p>PostgreSQL is used as the main database. It stores persistent relational data such as users, restaurants, menu items, orders, payments, deliveries, and reviews.</p>
+<p>Redis is used as an additional data store and cache. It can store frequently accessed data such as restaurant lists, menu data, order status, and rate limiter counters.</p>
+<p>During local testing, PostgreSQL used host port <code>5433</code> because port <code>5432</code> was already occupied on the local machine. Inside Docker, PostgreSQL still used port <code>5432</code>, so internal service communication was not changed.</p>
+<pre><code class="language-text">Host port: 5433
+Container port: 5432
+</code></pre>
+<hr />
+<h2 id="97-environment-configuration">9.7 Environment Configuration</h2>
+<p>The project uses environment variables to configure service connections and secrets. The <code>.env</code> file includes database, Redis, backend, frontend, gateway, and JWT configuration values.</p>
+<p>Examples of environment variables:</p>
+<pre><code class="language-text">POSTGRES_DB=food_delivery
+POSTGRES_USER=food_user
+POSTGRES_PASSWORD=food_password
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+REDIS_HOST=redis
+REDIS_PORT=6379
+DATABASE_URL=postgresql+psycopg2://food_user:food_password@postgres:5432/food_delivery
+REDIS_URL=redis://redis:6379/0
+BACKEND_PORT=8000
+FRONTEND_PORT=5173
+GATEWAY_PORT=80
+</code></pre>
+<p>The frontend also uses environment variables for API and WebSocket base URLs:</p>
+<pre><code class="language-text">VITE_API_BASE_URL=http://localhost/api
+VITE_WS_BASE_URL=ws://localhost/ws
+</code></pre>
+<hr />
+<h2 id="98-deployment-testing">9.8 Deployment Testing</h2>
+<p>The full system was tested through Docker Compose and Nginx Gateway. The final browser URL used for testing was:</p>
+<pre><code class="language-text">http://localhost
+</code></pre>
+<p>The tested frontend flow was:</p>
+<pre><code class="language-text">Restaurants
+→ View menu
+→ Add to cart
+→ Go to cart
+→ Create order
+→ Order Status
+→ WebSocket connected
+→ Move to next status
+</code></pre>
+<p>The final test confirmed that the frontend worked through the gateway and that the order status page displayed:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<hr />
+<h2 id="99-infrastructure-limitations">9.9 Infrastructure Limitations</h2>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local Docker Compose deployment</td>
+<td>Deploy to a production VPS or cloud environment.</td>
+</tr>
+<tr>
+<td>Single PostgreSQL container</td>
+<td>Use managed PostgreSQL or replication.</td>
+</tr>
+<tr>
+<td>Single Redis container</td>
+<td>Use Redis replication or managed Redis.</td>
+</tr>
+<tr>
+<td>Demo environment variables</td>
+<td>Use production secret management.</td>
+</tr>
+<tr>
+<td>No HTTPS in local setup</td>
+<td>Add HTTPS through reverse proxy and certificates.</td>
+</tr>
+<tr>
+<td>Basic gateway configuration</td>
+<td>Add advanced routing, rate limits, and security headers.</td>
+</tr>
+</tbody>
+</table>
+<p>The current infrastructure is sufficient for a course project demonstration and shows container orchestration, gateway routing, backend replicas, database, cache, and observability services.</p>
+<hr />
+<h1 id="10-observability">10. Observability</h1>
+<h2 id="101-observability-overview">10.1 Observability Overview</h2>
+<p>The project includes an observability stack to monitor the behavior of the food-delivery marketplace system. Observability is important because the application runs as multiple containers, including frontend, backend replicas, database, cache, gateway, and logging services.</p>
+<p>The observability stack includes:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prometheus</td>
+<td>Collects metrics from configured targets.</td>
+</tr>
+<tr>
+<td>Grafana</td>
+<td>Displays dashboards for metrics and logs.</td>
+</tr>
+<tr>
+<td>Loki</td>
+<td>Stores and queries logs.</td>
+</tr>
+<tr>
+<td>Promtail</td>
+<td>Collects container logs and forwards them to Loki.</td>
+</tr>
+</tbody>
+</table>
+<p>This stack helps the team understand whether services are running, inspect logs, and capture screenshots for the final report.</p>
+<hr />
+<h2 id="102-prometheus">10.2 Prometheus</h2>
+<p>Prometheus is used for metrics collection. It runs as a separate container and is available on:</p>
+<pre><code class="language-text">http://localhost:9090
+</code></pre>
+<p>Prometheus can be used to check whether configured services are reachable and whether monitoring targets are active.</p>
+<p>Prometheus is useful for:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Target monitoring</td>
+<td>Shows whether services are up or down.</td>
+</tr>
+<tr>
+<td>Metric collection</td>
+<td>Collects numeric time-series data.</td>
+</tr>
+<tr>
+<td>Querying</td>
+<td>Allows metric queries using PromQL.</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Helps identify service availability problems.</td>
+</tr>
+</tbody>
+</table>
+<p>A screenshot of Prometheus targets was saved for the report.</p>
+<hr />
+<h2 id="103-grafana">10.3 Grafana</h2>
+<p>Grafana is used as the dashboard and visualization tool. It is available on:</p>
+<pre><code class="language-text">http://localhost:3000
+</code></pre>
+<p>Grafana can display Prometheus metrics and Loki logs. It provides a visual interface for monitoring the system and presenting observability results in the final report.</p>
+<p>Grafana is used to demonstrate:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboards</td>
+<td>Visual panels for system metrics.</td>
+</tr>
+<tr>
+<td>Logs view</td>
+<td>Log search through Loki integration.</td>
+</tr>
+<tr>
+<td>System visibility</td>
+<td>A centralized view of application behavior.</td>
+</tr>
+</tbody>
+</table>
+<p>A Grafana dashboard screenshot was saved for the report.</p>
+<hr />
+<h2 id="104-loki-and-promtail">10.4 Loki and Promtail</h2>
+<p>Loki is used for log storage and querying, while Promtail collects logs from containers and forwards them to Loki.</p>
+<p>The log flow is:</p>
+<pre><code class="language-text">Docker containers
+→ Promtail
+→ Loki
+→ Grafana
+</code></pre>
+<p>This allows the team to inspect backend, frontend, gateway, and infrastructure logs from Grafana.</p>
+<p>Loki and Promtail are useful for:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Centralized logs</td>
+<td>Logs from multiple containers can be viewed in one place.</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Errors and request logs can be searched.</td>
+</tr>
+<tr>
+<td>User action tracing</td>
+<td>Logs can be checked after frontend actions such as order creation.</td>
+</tr>
+<tr>
+<td>Report evidence</td>
+<td>Log screenshots can be included in the final report.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="105-observability-screenshots">10.5 Observability Screenshots</h2>
+<p>The project includes observability screenshots in the repository. These screenshots are used as evidence that the monitoring and logging stack was configured and tested.</p>
+<p>Screenshots include:</p>
+<table>
+<thead>
+<tr>
+<th>Screenshot</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prometheus-targets.png</code></td>
+<td>Shows Prometheus target status.</td>
+</tr>
+<tr>
+<td><code>grafana-dashboard.png</code></td>
+<td>Shows Grafana dashboard.</td>
+</tr>
+<tr>
+<td><code>loki-logs.png</code></td>
+<td>Shows logs available through Loki/Grafana.</td>
+</tr>
+<tr>
+<td><code>docker-containers.png</code></td>
+<td>Shows running Docker containers.</td>
+</tr>
+<tr>
+<td><code>gateway-frontend.png</code></td>
+<td>Shows frontend access through Nginx gateway.</td>
+</tr>
+</tbody>
+</table>
+<p>Frontend screenshots were also saved separately:</p>
+<table>
+<thead>
+<tr>
+<th>Screenshot</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>01-restaurant-list.png</code></td>
+<td>Shows restaurant list page.</td>
+</tr>
+<tr>
+<td><code>02-menu-page.png</code></td>
+<td>Shows menu page.</td>
+</tr>
+<tr>
+<td><code>03-cart-page.png</code></td>
+<td>Shows cart page.</td>
+</tr>
+<tr>
+<td><code>04-order-status-page.png</code></td>
+<td>Shows order status page.</td>
+</tr>
+<tr>
+<td><code>05-websocket-connected.png</code></td>
+<td>Shows WebSocket connected state.</td>
+</tr>
+<tr>
+<td><code>06-status-updated.png</code></td>
+<td>Shows status update after action.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="106-observability-testing">10.6 Observability Testing</h2>
+<p>The observability stack was tested together with the full Docker Compose environment. The following command was used to verify running containers:</p>
+<pre><code class="language-bash">docker compose ps
+</code></pre>
+<p>The system showed the main services running:</p>
+<pre><code class="language-text">food_backend1
+food_backend2
+food_frontend
+food_gateway
+food_grafana
+food_loki
+food_postgres
+food_prometheus
+food_promtail
+food_redis
+</code></pre>
+<p>PostgreSQL and Redis were healthy. The frontend was accessible through:</p>
+<pre><code class="language-text">http://localhost
+</code></pre>
+<p>Prometheus, Grafana, Loki, and Promtail containers were also running.</p>
+<hr />
+<h2 id="107-observability-limitations">10.7 Observability Limitations</h2>
+<p>The current observability setup is suitable for a course-level prototype, but it has limitations.</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Basic dashboards</td>
+<td>Add more detailed dashboards for API latency, error rates, and request volume.</td>
+</tr>
+<tr>
+<td>Limited application metrics</td>
+<td>Add custom FastAPI metrics for important endpoints.</td>
+</tr>
+<tr>
+<td>Logs only at container level</td>
+<td>Add structured JSON logs with request IDs.</td>
+</tr>
+<tr>
+<td>No alerting</td>
+<td>Add Grafana or Prometheus alerts for service failures.</td>
+</tr>
+<tr>
+<td>Limited tracing</td>
+<td>Add distributed tracing for full request lifecycle tracking.</td>
+</tr>
+</tbody>
+</table>
+<p>Despite these limitations, the observability stack demonstrates service monitoring, log collection, dashboard usage, and report evidence.</p>
+<hr />
+<h1 id="11-frontend-implementation">11. Frontend Implementation</h1>
+<h2 id="111-frontend-overview">11.1 Frontend Overview</h2>
+<p>The frontend application was implemented using React and Vite. It provides a simple customer-facing interface for the food-delivery marketplace. The frontend focuses on demonstrating the main user flow rather than complex visual design.</p>
+<p>The implemented frontend flow is:</p>
+<pre><code class="language-text">Restaurant list
+→ Menu page
+→ Cart page
+→ Order creation
+→ Order status page
+→ Live WebSocket update
+</code></pre>
+<p>The frontend was first developed with mock data because the backend was not fully ready at the beginning. After the backend mock API was merged, the frontend was connected to the real backend endpoints while keeping mock data as a fallback mechanism.</p>
+<hr />
+<h2 id="112-frontend-pages">11.2 Frontend Pages</h2>
+<p>The frontend includes the following pages:</p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurant List Page</td>
+<td>Displays available restaurants.</td>
+</tr>
+<tr>
+<td>Menu Page</td>
+<td>Displays menu items for the selected restaurant.</td>
+</tr>
+<tr>
+<td>Cart Page</td>
+<td>Shows selected food items and total price.</td>
+</tr>
+<tr>
+<td>Order Status Page</td>
+<td>Shows order status and WebSocket connection state.</td>
+</tr>
+</tbody>
+</table>
+<p>These pages demonstrate the complete customer journey from browsing restaurants to tracking an order.</p>
+<hr />
+<h2 id="113-frontend-api-client">11.3 Frontend API Client</h2>
+<p>The frontend uses an API client to communicate with the backend. The API client centralizes REST API calls and provides fallback mock data if the backend is unavailable.</p>
+<p>The API client supports:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Backend Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>getRestaurants</td>
+<td>GET <code>/api/restaurants</code></td>
+</tr>
+<tr>
+<td>getMenuByRestaurantId</td>
+<td>GET <code>/api/restaurants/{restaurant_id}/menu</code></td>
+</tr>
+<tr>
+<td>createOrder</td>
+<td>POST <code>/api/orders</code></td>
+</tr>
+<tr>
+<td>getOrderById</td>
+<td>GET <code>/api/orders/{order_id}</code></td>
+</tr>
+<tr>
+<td>updateOrderStatus</td>
+<td>PATCH <code>/api/orders/{order_id}/status</code></td>
+</tr>
+</tbody>
+</table>
+<p>The frontend uses environment variables to configure backend connection URLs:</p>
+<pre><code class="language-text">VITE_API_BASE_URL=http://localhost/api
+VITE_WS_BASE_URL=ws://localhost/ws
+</code></pre>
+<p>This configuration allows the frontend to work through the Nginx gateway in Docker Compose.</p>
+<hr />
+<h2 id="114-mock-data-fallback">11.4 Mock Data Fallback</h2>
+<p>Mock data was kept as a fallback mechanism. This was useful because frontend development started before all backend endpoints were fully ready.</p>
+<p>The fallback data includes:</p>
+<table>
+<thead>
+<tr>
+<th>Mock Data</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restaurants</td>
+<td>Allows the restaurant list page to work without backend.</td>
+</tr>
+<tr>
+<td>menuItems</td>
+<td>Allows the menu page to show food items without backend.</td>
+</tr>
+<tr>
+<td>fakeOrder</td>
+<td>Allows the order status page to work without backend.</td>
+</tr>
+</tbody>
+</table>
+<p>This approach allowed frontend development and testing to continue independently. After backend integration, the frontend could use real API responses while still remaining stable if one endpoint temporarily failed.</p>
+<hr />
+<h2 id="115-cart-and-order-creation-flow">11.5 Cart and Order Creation Flow</h2>
+<p>The cart page allows users to review selected menu items before creating an order. Items are stored in local frontend state and browser storage during the prototype flow. When the user clicks “Create order”, the frontend sends an order creation request to the backend.</p>
+<p>The order creation payload includes:</p>
+<pre><code class="language-json">{
+  &quot;restaurant_id&quot;: 1,
+  &quot;customer_id&quot;: 1,
+  &quot;delivery_address&quot;: &quot;Demo address, Tashkent&quot;,
+  &quot;total_price&quot;: 19.98,
+  &quot;items&quot;: [
+    {
+      &quot;menu_item_id&quot;: 101,
+      &quot;quantity&quot;: 1
+    }
+  ]
+}
+</code></pre>
+<p>After the backend returns the created order ID, the frontend redirects the user to the order status page.</p>
+<hr />
+<h2 id="116-websocket-integration">11.6 WebSocket Integration</h2>
+<p>The order status page includes WebSocket integration for live order status updates. When the page opens, the frontend connects to:</p>
+<pre><code class="language-text">ws://localhost/ws/orders/{order_id}
+</code></pre>
+<p>If the connection is successful, the page displays:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<p>The backend can then send status update messages to the frontend. The frontend updates the visible status without refreshing the page.</p>
+<p>The supported order status lifecycle is:</p>
+<pre><code class="language-text">created → confirmed → preparing → picked_up → delivered
+</code></pre>
+<p>This feature demonstrates the real-time requirement of the system.</p>
+<hr />
+<h2 id="117-frontend-screenshots">11.7 Frontend Screenshots</h2>
+<p>Frontend screenshots were saved in the repository under:</p>
+<pre><code class="language-text">docs/screenshots/frontend/
+</code></pre>
+<p>The saved screenshots include:</p>
+<table>
+<thead>
+<tr>
+<th>Screenshot</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01-restaurant-list.png</td>
+<td>Restaurant list page.</td>
+</tr>
+<tr>
+<td>02-menu-page.png</td>
+<td>Menu page with menu items.</td>
+</tr>
+<tr>
+<td>03-cart-page.png</td>
+<td>Cart page before order creation.</td>
+</tr>
+<tr>
+<td>04-order-status-page.png</td>
+<td>Order status page.</td>
+</tr>
+<tr>
+<td>05-websocket-connected.png</td>
+<td>Order status page showing WebSocket connected.</td>
+</tr>
+<tr>
+<td>06-status-updated.png</td>
+<td>Order status page after status update.</td>
+</tr>
+</tbody>
+</table>
+<p>The most important screenshot for the WebSocket requirement is:</p>
+<pre><code class="language-text">05-websocket-connected.png
+</code></pre>
+<p>It shows that the order status page successfully connected to the backend WebSocket endpoint.</p>
+<hr />
+<h2 id="118-frontend-testing">11.8 Frontend Testing</h2>
+<p>The frontend was tested in two modes:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local Vite development</td>
+<td>Tested React pages with <code>npm run dev</code>.</td>
+</tr>
+<tr>
+<td>Docker Compose through Nginx</td>
+<td>Tested the full system through <code>http://localhost</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The final tested flow was:</p>
+<pre><code class="language-text">Open http://localhost
+→ Open restaurant list
+→ View menu
+→ Add item to cart
+→ Go to cart
+→ Create order
+→ Open order status page
+→ Confirm WebSocket connected
+→ Move order to next status
+</code></pre>
+<p>The final Docker Compose test confirmed that the frontend worked through the gateway and that WebSocket status was connected.</p>
+<hr />
+<h2 id="119-frontend-limitations">11.9 Frontend Limitations</h2>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Future Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple UI design</td>
+<td>Improve visual design and responsiveness.</td>
+</tr>
+<tr>
+<td>Basic cart logic</td>
+<td>Store cart data in backend or authenticated user session.</td>
+</tr>
+<tr>
+<td>Demo customer ID</td>
+<td>Use real authenticated user identity.</td>
+</tr>
+<tr>
+<td>Limited error handling</td>
+<td>Add user-friendly error messages and retry behavior.</td>
+</tr>
+<tr>
+<td>Basic WebSocket handling</td>
+<td>Add automatic reconnect and connection recovery.</td>
+</tr>
+<tr>
+<td>Mock fallback still present</td>
+<td>Keep only controlled fallback behavior in production.</td>
+</tr>
+</tbody>
+</table>
+<p>Despite these limitations, the frontend demonstrates the required marketplace flow and real-time order status updates.</p>
+<hr />
+<h1 id="12-testing-and-known-limitations">12. Testing and Known Limitations</h1>
+<h2 id="121-testing-overview">12.1 Testing Overview</h2>
+<p>The project was tested through local development and Docker Compose integration. The goal of testing was to confirm that the main system components work together and that the food-delivery user flow can be demonstrated successfully.</p>
+<p>The main tested areas were:</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Tested Functionality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>Restaurant list, menu page, cart, order creation, order status page.</td>
+</tr>
+<tr>
+<td>Backend API</td>
+<td>Restaurant endpoints, menu endpoint, order creation, order retrieval, order status update.</td>
+</tr>
+<tr>
+<td>WebSocket</td>
+<td>Live order status connection and update display.</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>PostgreSQL container startup, migrations, seed data, and query support.</td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>Redis container startup and cache design readiness.</td>
+</tr>
+<tr>
+<td>Docker Compose</td>
+<td>Multi-container startup and service networking.</td>
+</tr>
+<tr>
+<td>Nginx Gateway</td>
+<td>Frontend, API, and WebSocket access through <code>http://localhost</code>.</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Prometheus, Grafana, Loki, and Promtail containers.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="122-frontend-testing">12.2 Frontend Testing</h2>
+<p>The frontend was tested first in local Vite development mode and later through the full Docker Compose system.</p>
+<p>Local frontend command:</p>
+<pre><code class="language-bash">npm run dev
+</code></pre>
+<p>Docker Compose access URL:</p>
+<pre><code class="language-text">http://localhost
+</code></pre>
+<p>The final frontend test flow was:</p>
+<pre><code class="language-text">Open http://localhost
+→ View restaurant list
+→ Open restaurant menu
+→ Add item to cart
+→ Open cart
+→ Create order
+→ Open order status page
+→ Confirm WebSocket connected
+→ Move order to next status
+</code></pre>
+<p>The final result confirmed that the frontend was working through the gateway and that the WebSocket state showed:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<hr />
+<h2 id="123-backend-api-testing">12.3 Backend API Testing</h2>
+<p>The backend API was tested through the frontend flow and Swagger documentation.</p>
+<p>Swagger URL:</p>
+<pre><code class="language-text">http://127.0.0.1:8000/docs
+</code></pre>
+<p>The important backend endpoints were:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Test Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/restaurants</code></td>
+<td>Restaurant list loaded successfully.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/restaurants/{restaurant_id}/menu</code></td>
+<td>Menu items loaded successfully.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/orders</code></td>
+<td>Order creation worked.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/{order_id}</code></td>
+<td>Order status page loaded order data.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/orders/{order_id}/status</code></td>
+<td>Order status update worked.</td>
+</tr>
+<tr>
+<td>WS</td>
+<td><code>/ws/orders/{order_id}</code></td>
+<td>WebSocket connection worked.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="124-docker-compose-testing">12.4 Docker Compose Testing</h2>
+<p>The full stack was tested using Docker Compose.</p>
+<p>Commands used:</p>
+<pre><code class="language-bash">docker compose down
+docker compose up -d --build
+docker compose ps
+</code></pre>
+<p>The final Docker Compose test showed that the required containers were running:</p>
+<pre><code class="language-text">food_backend1
+food_backend2
+food_frontend
+food_gateway
+food_grafana
+food_loki
+food_postgres
+food_prometheus
+food_promtail
+food_redis
+</code></pre>
+<p>PostgreSQL and Redis were shown as healthy. The frontend was accessible through Nginx on:</p>
+<pre><code class="language-text">http://localhost
+</code></pre>
+<hr />
+<h2 id="125-websocket-testing">12.5 WebSocket Testing</h2>
+<p>WebSocket testing was important because it demonstrates the real-time requirement of the project.</p>
+<p>The tested WebSocket endpoint pattern was:</p>
+<pre><code class="language-text">/ws/orders/{order_id}
+</code></pre>
+<p>The frontend displayed the connection state on the order status page. The final screenshot showed:</p>
+<pre><code class="language-text">WebSocket: connected
+</code></pre>
+<p>After pressing the status update button, the order status changed from one state to the next. This demonstrated live order status update behavior.</p>
+<hr />
+<h2 id="126-screenshot-evidence">12.6 Screenshot Evidence</h2>
+<p>The following screenshots were collected for the report:</p>
+<table>
+<thead>
+<tr>
+<th>Screenshot</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>01-restaurant-list.png</code></td>
+<td>Restaurant list page works.</td>
+</tr>
+<tr>
+<td><code>02-menu-page.png</code></td>
+<td>Menu page works.</td>
+</tr>
+<tr>
+<td><code>03-cart-page.png</code></td>
+<td>Cart page works.</td>
+</tr>
+<tr>
+<td><code>04-order-status-page.png</code></td>
+<td>Order status page works.</td>
+</tr>
+<tr>
+<td><code>05-websocket-connected.png</code></td>
+<td>WebSocket connected state works.</td>
+</tr>
+<tr>
+<td><code>06-status-updated.png</code></td>
+<td>Status update works.</td>
+</tr>
+<tr>
+<td><code>docker-containers.png</code></td>
+<td>Docker containers are running.</td>
+</tr>
+<tr>
+<td><code>gateway-frontend.png</code></td>
+<td>Frontend is available through gateway.</td>
+</tr>
+<tr>
+<td><code>prometheus-targets.png</code></td>
+<td>Prometheus target page.</td>
+</tr>
+<tr>
+<td><code>grafana-dashboard.png</code></td>
+<td>Grafana dashboard.</td>
+</tr>
+<tr>
+<td><code>loki-logs.png</code></td>
+<td>Loki logs.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="127-known-limitations">12.7 Known Limitations</h2>
+<p>The current system is a course-level prototype and has several limitations.</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple frontend UI</td>
+<td>The frontend focuses on demonstrating functionality rather than advanced design.</td>
+</tr>
+<tr>
+<td>Demo user data</td>
+<td>Some flows use demo customer data instead of full authentication.</td>
+</tr>
+<tr>
+<td>Local storage cart</td>
+<td>Cart data is handled on the frontend for the prototype.</td>
+</tr>
+<tr>
+<td>Single PostgreSQL instance</td>
+<td>The database is not replicated.</td>
+</tr>
+<tr>
+<td>Single Redis instance</td>
+<td>Redis is not configured as a cluster.</td>
+</tr>
+<tr>
+<td>Basic deployment</td>
+<td>The system was mainly tested through local Docker Compose.</td>
+</tr>
+<tr>
+<td>Limited production security</td>
+<td>HTTPS, secure secret management, and full role-based access should be added for production.</td>
+</tr>
+<tr>
+<td>Basic observability</td>
+<td>Dashboards and logs are sufficient for demonstration but not production-grade.</td>
+</tr>
+<tr>
+<td>Prototype batch pipeline</td>
+<td>The settlement pipeline is designed conceptually and should be extended for production scheduling.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="128-future-improvements">12.8 Future Improvements</h2>
+<p>Future improvements could include:</p>
+<table>
+<thead>
+<tr>
+<th>Improvement</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Full authentication</td>
+<td>Add complete login, registration, and role-based access control.</td>
+</tr>
+<tr>
+<td>Better cart persistence</td>
+<td>Store cart data on the backend for authenticated users.</td>
+</tr>
+<tr>
+<td>Production deployment</td>
+<td>Deploy the system to a VPS or cloud provider with HTTPS.</td>
+</tr>
+<tr>
+<td>Advanced observability</td>
+<td>Add custom metrics, alerts, and distributed tracing.</td>
+</tr>
+<tr>
+<td>Improved WebSocket reliability</td>
+<td>Add reconnect logic and persistent event delivery.</td>
+</tr>
+<tr>
+<td>Payment provider integration</td>
+<td>Integrate a real payment gateway.</td>
+</tr>
+<tr>
+<td>Courier app features</td>
+<td>Add courier assignment and delivery map features.</td>
+</tr>
+<tr>
+<td>Admin dashboard</td>
+<td>Add admin tools for monitoring orders and restaurants.</td>
+</tr>
+<tr>
+<td>Advanced batch pipeline</td>
+<td>Add scheduled execution, settlement table, and financial audit records.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="129-testing-conclusion">12.9 Testing Conclusion</h2>
+<p>The final testing confirmed that the main project requirements were demonstrated successfully. The application runs through Docker Compose, the frontend is accessible through Nginx Gateway, the REST API supports the main business flow, and WebSocket live order tracking works on the order status page.</p>
+<p>The project is not production-ready, but it successfully demonstrates a full-stack database application with frontend, backend, database, cache, WebSocket, Docker infrastructure, observability, diagrams, screenshots, and documentation.</p>
+<hr />
+<h1 id="13-team-contribution-table">13. Team Contribution Table</h1>
+<p>The project was completed as a team project. Each team member was responsible for a specific part of the system. The table below summarizes the main responsibilities and completed contributions.</p>
+<table>
+<thead>
+<tr>
+<th>Team Member</th>
+<th>Role</th>
+<th>Main Responsibilities</th>
+<th>Completed Contributions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maxsetov Salamat</td>
+<td>Frontend + Report</td>
+<td>React frontend, user flow, WebSocket demonstration, screenshots, report sections</td>
+<td>Implemented restaurant list page, menu page, cart page, order creation flow, and order status page. Connected frontend to REST API and WebSocket endpoint. Captured frontend screenshots for the report. Prepared frontend implementation text and diagrams.</td>
+</tr>
+<tr>
+<td>Maxsetov Nurmukhamad</td>
+<td>Backend Core</td>
+<td>FastAPI backend, REST API, WebSocket, authentication, Redis cache, and rate limiting</td>
+<td>Implemented backend API endpoints, JWT authentication, WebSocket backend logic, order status updates, Redis cache integration, and Token Bucket Rate Limiter.</td>
+</tr>
+<tr>
+<td>Maxsetov Salamat</td>
+<td>Database + Cache</td>
+<td>PostgreSQL schema, Alembic migrations, seed data, indexes, and Redis cache design</td>
+<td>Designed and implemented database schema, relationships, constraints, Alembic migrations, seed data, performance indexes, query optimization results, and Redis cache design.</td>
+</tr>
+<tr>
+<td>Mirjalilov Mirkamol</td>
+<td>Docker Infrastructure + Observability</td>
+<td>Docker Compose, Nginx gateway, backend replicas, observability stack, and VPS deployment</td>
+<td>Configured Docker Compose, Nginx API Gateway, backend replicas, PostgreSQL, Redis, frontend container, Prometheus, Grafana, Loki, Promtail, and DigitalOcean VPS deployment.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="14-references">14. References</h1>
+<ol>
+<li>FastAPI Documentation. Used for backend REST API and WebSocket implementation.</li>
+<li>React Documentation. Used for frontend component structure and state management.</li>
+<li>Vite Documentation. Used for frontend development server and build setup.</li>
+<li>PostgreSQL Documentation. Used for relational database design and SQL constraints.</li>
+<li>SQLAlchemy Documentation. Used for ORM models and backend database access.</li>
+<li>Alembic Documentation. Used for database migrations.</li>
+<li>Redis Documentation. Used for cache and additional data store design.</li>
+<li>Docker Documentation. Used for containerization.</li>
+<li>Docker Compose Documentation. Used for multi-container orchestration.</li>
+<li>Nginx Documentation. Used for API Gateway and reverse proxy configuration.</li>
+<li>Prometheus Documentation. Used for metrics collection.</li>
+<li>Grafana Documentation. Used for dashboards and visualization.</li>
+<li>Loki and Promtail Documentation. Used for log collection and querying.</li>
+<li>Mermaid Documentation. Used for ER, architecture, infrastructure, and BPMN-style diagrams.</li>
+</ol>
+<hr />
+<h1 id="appendix-a-screenshots">Appendix A. Screenshots</h1>
+<p>The following screenshots were collected and stored in the project repository.</p>
+<table>
+<thead>
+<tr>
+<th>Screenshot</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restaurant list page</td>
+<td><code>docs/screenshots/frontend/01-restaurant-list.png</code></td>
+</tr>
+<tr>
+<td>Menu page</td>
+<td><code>docs/screenshots/frontend/02-menu-page.png</code></td>
+</tr>
+<tr>
+<td>Cart page</td>
+<td><code>docs/screenshots/frontend/03-cart-page.png</code></td>
+</tr>
+<tr>
+<td>Order status page</td>
+<td><code>docs/screenshots/frontend/04-order-status-page.png</code></td>
+</tr>
+<tr>
+<td>WebSocket connected</td>
+<td><code>docs/screenshots/frontend/05-websocket-connected.png</code></td>
+</tr>
+<tr>
+<td>Status updated</td>
+<td><code>docs/screenshots/frontend/06-status-updated.png</code></td>
+</tr>
+<tr>
+<td>Docker containers</td>
+<td><code>docs/screenshots/docker-containers.png</code></td>
+</tr>
+<tr>
+<td>Gateway frontend</td>
+<td><code>docs/screenshots/gateway-frontend.png</code></td>
+</tr>
+<tr>
+<td>Grafana dashboard</td>
+<td><code>docs/screenshots/grafana-dashboard.png</code></td>
+</tr>
+<tr>
+<td>Prometheus targets</td>
+<td><code>docs/screenshots/prometheus-targets.png</code></td>
+</tr>
+<tr>
+<td>Loki logs</td>
+<td><code>docs/screenshots/loki-logs.png</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="appendix-b-diagrams">Appendix B. Diagrams</h1>
+<p>The following diagrams were prepared for the project report.</p>
+<table>
+<thead>
+<tr>
+<th>Diagram</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System architecture diagram</td>
+<td><code>docs/diagrams/system_architecture.md</code></td>
+</tr>
+<tr>
+<td>Docker infrastructure diagram</td>
+<td><code>docs/diagrams/docker_infrastructure.md</code></td>
+</tr>
+<tr>
+<td>BPMN-style batch settlement pipeline diagram</td>
+<td><code>docs/diagrams/batch_settlement_bpmn.md</code></td>
+</tr>
+<tr>
+<td>ER diagram</td>
+<td><code>docs/er_diagram.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="final-conclusion">Final Conclusion</h1>
+<p>The food-delivery marketplace project demonstrates a complete database application with frontend, backend, database, cache, real-time communication, batch pipeline design, infrastructure, observability, and documentation. The system supports the main business scenario of browsing restaurants, viewing menus, creating orders, and tracking order status updates through WebSocket.</p>
+<p>The final implementation was tested through Docker Compose and Nginx Gateway. The frontend was accessible through <code>http://localhost</code>, the backend API supported the main user flow, and the order status page successfully showed <code>WebSocket: connected</code>. The project also includes screenshots, diagrams, database documentation, and a final report structure suitable for submission.</p>
+</body>
+</html>
